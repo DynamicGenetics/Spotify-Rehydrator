@@ -1,0 +1,11 @@
+# Files
+secrets.py
+
+# Standard annoying things
+.vscode
+.ipynb_checkpoints
+__pycache__
+.DS_Store
+*.ipynb
+*.json
+/output/
