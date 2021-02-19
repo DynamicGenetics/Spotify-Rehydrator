@@ -6,7 +6,7 @@ Imports functions from `functions.py` and API keys from `secrets.py`.
 import spotipy
 
 from secrets import CLIENT_ID, CLIENT_SECRET
-from functions import 
+from functions import hydrate
 
 # Spotify Developer Credentials
 auth = spotipy.oauth2.SpotifyClientCredentials(
@@ -21,4 +21,6 @@ sp = spotipy.Spotify(auth=token)
 if __name__ == "__main__":
     df = hydrate(sp)
 
-    df.to_pickle("./hydrated_data.pkl")
+    print("All done!")
+
+    df.to_pickle("./output/hydrated_data.pkl")
