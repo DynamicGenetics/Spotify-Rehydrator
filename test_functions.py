@@ -1,4 +1,5 @@
-"""Tests for any functions involving data manipulation in `functions.py`.
+"""
+Tests for any functions involving data manipulation in `functions.py`.
 Functions that solely perform API calls are not tested since API functionality is assumed.
 """
 
