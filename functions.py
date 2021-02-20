@@ -70,7 +70,7 @@ def read(person_id=None):
                     loaded_dict = json.load(f)
                     # Add person_id as a key/value.
                     for item in loaded_dict:
-                        item.update({"id": person_id})
+                        item.update({"person_id": person_id})
 
                 # Add this dict to the list
                 data.extend(loaded_dict)  # Read data frame from json file
@@ -233,9 +233,11 @@ def add_features_cols(sp, df: pd.DataFrame, person_id=None):
         "---> I'm going to search the Spotify API for each track's features now."
     )
 
-    # Get all of the unique trackIDs.
+    # Get a list of the unique trackIDs.
     unique_tracks = df["trackID"]
     unique_tracks = unique_tracks.drop_duplicates().dropna()
+    unique_tracks = unique_tracks.to_list()
+
     # Print the number of tracks to the console.
     logger.info(
         "---> The total number of retrieved trackIDs is {}".format(len(unique_tracks))
@@ -244,15 +246,20 @@ def add_features_cols(sp, df: pd.DataFrame, person_id=None):
     # Init empty list
     feature_dict = []
 
-    def get_features(sp, uri):
-        """Get a dictionary of track features from a single URI, and append to list."""
-        features = sp.audio_features(uri)[0]
+    def get_features(sp, uri_list):
+        """Get a dictionary of track features from a list of URI, and append to list.
+        Documentation for this endpoint is here
+        https://developer.spotify.com/documentation/web-api/reference/#endpoint-get-several-audio-features"""
+        features = sp.audio_features(uri_list)
 
-        if features:  # If 'features' exists then...
-            feature_dict.append(features)  # ...append features to the the list.
+        for feature_set in features:
+            if feature_set:  # If is is not empty
+                feature_dict.append(feature_set)  # ...append features to the the list.
 
-    # Get the features for each unique track.
-    unique_tracks.apply(lambda x: get_features(sp, x))
+    # Get the features for each unique track. Iterate in batches of 100 because the audio_features API
+    # can handle batches up to that size.
+    for i in tqdm(range(0, len(unique_tracks), 100)):
+        get_features(sp, unique_tracks[i : i + 100])
 
     # Turn the features dictionary to a dataframe.
     feature_df = pd.DataFrame.from_records(feature_dict)
@@ -308,6 +315,7 @@ def rehydrate(sp):
 
     ids = get_ids()
 
+    # If there are no seperate participants the run the pipeline with no participant_id
     if ids is None:
         if not os.path.isfile(os.path.join("output", "hydrated.csv")):
             run_pipeline(sp)
@@ -316,8 +324,12 @@ def rehydrate(sp):
                 """There is already a hydrated.csv file in output. Remove this
             file if you want to run the rehydrator again for new data."""
             )
-    else:
-        for person_id in tqdm(ids):
+    else:  # Otherwise, iterate over all the participants.
+        for index, person_id in enumerate(ids, start=1):
+
+            # Print update on how many there are to go
+            logger.info("{} of {}".format(index, len(ids)))
+
             if not os.path.isfile(os.path.join("output", person_id + "_hydrated.csv")):
                 run_pipeline(sp, person_id)
             else:
