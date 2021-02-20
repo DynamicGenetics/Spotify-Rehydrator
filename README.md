@@ -1,4 +1,4 @@
-![Spotify Rehydrator Logo](https://github.com/DynamicGenetics/Spotify-Rehydrator/blob/main/image.png?raw=true)
+![Spotify Rehydrator Logo](https://github.com/DynamicGenetics/Spotify-Rehydrator/blob/main/docs/image.png?raw=true)
 
 This application allows you to get audio features of songs downloaded through Spotify's 'download my data' facility.  
 It requires the files named `StreamingHistory{n}.json` where {n} represents the file number that starts at 0, and goes up to however many files were retrieved.   
