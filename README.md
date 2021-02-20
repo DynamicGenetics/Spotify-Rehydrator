@@ -1,4 +1,4 @@
-# Spotify Rehydrator
+# 🎶💧 Spotify Rehydrator
 
 This application allows you to get audio features of songs downloaded through Spotify's 'download my data' facility. 
 It requires the files named `StreamingHistory{n}.json` where {n} represents the file number that starts at 0, and goes up to however many files were retrieved.   
