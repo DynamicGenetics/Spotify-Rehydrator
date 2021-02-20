@@ -3,51 +3,98 @@ Module containing the 'worker' functions for the rehydration process.
 These include input/output and API calls.
 """
 import os
+import logging
 import pandas as pd
 import simplejson as json
 
 from tqdm.auto import tqdm  # https://github.com/tqdm/tqdm
 
+logger = logging.getLogger(__name__)
 
-# Read in the json files (speed tested this against pd concat - this was faster)
-def read_files():
-    """Read in all the json files from the ./input/ folder and return one dataframe.
-    Files should be prefixed with a unique identifier and '_'. This unique id will then be
-    listed against each listening event in the dataframe. """
 
-    print("Ok, I'm reading in the JSON files from input.")
-
-    data = []  # an empty list to store the json files
+def get_ids():
+    """Get a list of all the participant ids in the input folder.
+    Write them to a.txt file in the temp folder. Return if None if
+    there are no ids."""
 
     # Get a list of all the files in the input folder
     file_list = os.listdir("./input/")
 
-    # Read each file
+    # Initialise id list
+    ids = []
+
+    # Get the unique ids for each file.
     for file in file_list:
         if file.endswith(".json"):
             # Get the unique user ID
-            person_id = file.split(sep="_")[0]
-            # Make the full filepath for reading the file.
-            file = os.path.join("input", file)
+            try:
+                person_id = file.split(sep="_")[0]
+                ids.append(person_id)
+            # If there are no files with ids then pass
+            except IndexError:
+                pass
 
-            # For this file, load the json to a dict, and add the ID as a key/value.
-            with open(file) as f:
+    # If ids exist then write it out
+    if not os.path.exists("temp"):
+        os.mkdir("temp")
 
-                loaded_dict = json.load(f)
+    if ids:
+        with open(os.path.join("temp", "ids.txt"), "w") as output:
+            output.write(str(ids))
+        return ids
+    else:
+        ids = None
 
-                for item in loaded_dict:
-                    item.update({"id": person_id})
+    return ids
 
-            # Add this dict to the list
-            data.extend(loaded_dict)  # Read data frame from json file
 
-    print("All done, I've read the files.")
+def read(person_id=None):
+    """Read in the .json files from input folder. If person_id is passed, it will only read
+    files that start with the person_id. Returns a dataframe of file content with an
+    additional column for person_id if included."""
+
+    data = []  # an empty list to store the json files
+
+    files = os.listdir("./input/")
+
+    # If person_id was passed as an argument
+    if person_id:
+        # Read each file
+        for file in files:
+            if file.startswith(person_id):
+                # Make the full filepath for reading the file.
+                file = os.path.join("input", file)
+
+                # For this file, load the json to a dict, and add the ID as a key/value.
+                with open(file) as f:
+                    loaded_dict = json.load(f)
+                    # Add person_id as a key/value.
+                    for item in loaded_dict:
+                        item.update({"id": person_id})
+
+                # Add this dict to the list
+                data.extend(loaded_dict)  # Read data frame from json file
+
+    else:
+        # Read each file
+        for file in files:
+            if file.endwith(".json"):
+                # Make the full filepath for reading the file.
+                file = os.path.join("input", file)
+                # For this file, load the json to a dict.
+                with open(file) as f:
+                    loaded_dict = json.load(f)
+
+                # Add this dict to the list
+                data.extend(loaded_dict)  # Read data frame from json file
+
+        logger.info("All done, I've read all the files.")
 
     # Export this as a dataframe.
     return pd.DataFrame.from_records(data)
 
 
-def unmatched_tracks(new_tracks: pd.DataFrame):
+def unmatched_tracks(new_tracks: pd.DataFrame, person_id=None):
     """Compares any existing `uri_matched.csv` files with the current tracks to be matched
     and only returns unmatched tracks to save API calls.
 
@@ -55,7 +102,12 @@ def unmatched_tracks(new_tracks: pd.DataFrame):
     """
     # It might be that we have already run this before. So first, lets check for an existing file.
     try:
-        existing_df = pd.read_csv(os.path.join("temp", "uri_matched.csv"), sep="\t")
+        if person_id:
+            existing_df = pd.read_csv(
+                os.path.join("temp", person_id + "_uri_matched.csv"), sep="\t"
+            )
+        else:
+            existing_df = pd.read_csv(os.path.join("temp", "uri_matched.csv"), sep="\t")
         existing_tracks = existing_df[["artistName", "trackName"]].drop_duplicates()
 
         # If they are the same then there are no tracks to process.
@@ -90,7 +142,7 @@ def get_URI(sp, artist, track):
     return results["tracks"]["items"][0]["uri"]
 
 
-def add_URI(sp, file: pd.DataFrame):
+def add_URI(sp, file: pd.DataFrame, person_id=None):
     """Add the track URI/ID as a column at the end of the dataframe"""
 
     # Subset the file to only be the artist and track name
@@ -98,18 +150,23 @@ def add_URI(sp, file: pd.DataFrame):
     tracks = file[["artistName", "trackName"]].drop_duplicates()
 
     # Reduce this to just the unmatched tracks
-    tracks = unmatched_tracks(new_tracks=tracks)
+    tracks = unmatched_tracks(tracks, person_id)
 
     # If unmatched_tracks returned empty, then exit here and return the existing file.
     if tracks is None:
-        print(
-            """There are no new tracks to find so I'm just returning ./temp/uri_matched.csv"""
+        logger.info(
+            """---> There are no new tracks to find so I'm just returning the existing file."""
         )
-        return pd.read_csv(os.path.join("temp", "uri_matched.csv"), sep="\t")
+        if person_id:
+            return pd.read_csv(
+                os.path.join("temp", person_id + "_uri_matched.csv"), sep="\t"
+            )
+        else:
+            return pd.read_csv(os.path.join("temp", "uri_matched.csv"), sep="\t")
 
     # Print this to the console.
-    print(
-        "I'm going to search the Spotify API now for {} tracks. I'll keep you updated with a progress bar.".format(
+    logger.info(
+        """---> I'm going to search the Spotify API now for {} tracks""".format(
             len(tracks)
         )
     )
@@ -135,8 +192,8 @@ def add_URI(sp, file: pd.DataFrame):
             # Update the progress bar
             pbar.update(1)
 
-    print(
-        "Great, I've searched for all the tracks. In total {} did not have a URI returned by the API.".format(
+    logger.info(
+        "---> I've searched for all the tracks. In total {} did not have a URI returned by the API.".format(
             trackIDs.count("NONE")
         )
     )
@@ -152,27 +209,37 @@ def add_URI(sp, file: pd.DataFrame):
     # Save it to csv too.
     if not os.path.exists("temp"):
         os.mkdir("temp")
-    matched.to_csv(
-        os.path.join("temp", "uri_matched.csv"), sep="\t", index=False
-    )  # Tab seperated values
-    print(
-        """I've added the URIs to the original dataset and saved it to the output folder."""
+
+    if person_id:
+        matched.to_csv(
+            os.path.join("temp", person_id + "_uri_matched.csv"), sep="\t", index=False
+        )  # Tab seperated values
+    else:
+        matched.to_csv(
+            os.path.join("temp", "uri_matched.csv"), sep="\t", index=False
+        )  # Tab seperated values
+    logger.info(
+        """---> I've added the URIs to this dataset and saved it to the output folder."""
     )
 
     # Return the matched dataframe.
     return matched
 
 
-def add_features_cols(sp, df: pd.DataFrame):
+def add_features_cols(sp, df: pd.DataFrame, person_id=None):
     """Gets the track features for all the rows in the df based on trackID column."""
 
-    print("I'm going to search the Spotify API for each track's features now.")
+    logger.info(
+        "---> I'm going to search the Spotify API for each track's features now."
+    )
 
     # Get all of the unique trackIDs.
     unique_tracks = df["trackID"]
     unique_tracks = unique_tracks.drop_duplicates().dropna()
     # Print the number of tracks to the console.
-    print("The total number of retrieved trackIDs is {}".format(len(unique_tracks)))
+    logger.info(
+        "---> The total number of retrieved trackIDs is {}".format(len(unique_tracks))
+    )
 
     # Init empty list
     feature_dict = []
@@ -190,27 +257,72 @@ def add_features_cols(sp, df: pd.DataFrame):
     # Turn the features dictionary to a dataframe.
     feature_df = pd.DataFrame.from_records(feature_dict)
     # Write the features to the output file.
-    feature_df.to_csv(os.path.join("temp", "features_alone.csv"), sep="\t", index=False)
+    if person_id:
+        feature_df.to_csv(
+            os.path.join("temp", person_id + "_uri_to_features.csv"),
+            sep="\t",
+            index=False,
+        )
+    else:
+        feature_df.to_csv(
+            os.path.join("temp", "uri_to_features.csv"), sep="\t", index=False
+        )
 
     # Merge this dataframe into the main dataframe so every listening event has associated data.
     df = pd.merge(df, feature_df, how="left", left_on="trackID", right_on="uri")
 
-    print("I've found the features and now I'll write them to output/hydrated_data.csv")
+    logger.info(
+        "---> I've found the features and now I'll write them to the output folder"
+    )
 
     # Write the merged dataframe out.
     # Save it to csv too.
     if not os.path.exists("output"):
         os.mkdir("output")
-    df.to_csv(os.path.join("output", "hydrated_data.csv"), sep="\t", index=False)
+
+    if person_id:
+        df.to_csv(
+            os.path.join("output", person_id + "_hydrated.csv"), sep="\t", index=False
+        )
+    else:
+        df.to_csv(os.path.join("output", "hydrated.csv"), sep="\t", index=False)
 
     return df
 
 
-def hydrate(sp):
-    """Run the re-hydration function in the correct order."""
+def run_pipeline(sp, person_id=None):
+    """Run the re-hydration functions in the correct order."""
 
-    df = read_files()
-    df = add_URI(sp, df)
-    df = add_features_cols(sp, df)
+    if person_id:
+        logging.info("Rehydrating {}".format(person_id))
 
-    return df
+    df = read(person_id)
+    df = add_URI(sp, df, person_id)
+    df = add_features_cols(sp, df, person_id)
+
+    if person_id:
+        logger.info("---> Finished {}.".format(person_id))
+
+
+def rehydrate(sp):
+
+    ids = get_ids()
+
+    if ids is None:
+        if not os.path.isfile(os.path.join("output", "hydrated.csv")):
+            run_pipeline(sp)
+        else:
+            logger.info(
+                """There is already a hydrated.csv file in output. Remove this
+            file if you want to run the rehydrator again for new data."""
+            )
+    else:
+        for person_id in tqdm(ids):
+            if not os.path.isfile(os.path.join("output", person_id + "_hydrated.csv")):
+                run_pipeline(sp, person_id)
+            else:
+                logger.info(
+                    "Skipping {}. Output file already exists.".format(person_id)
+                )
+
+    logger.info("Rehydration complete.")
