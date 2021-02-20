@@ -1,13 +1,15 @@
 # Files
 secrets.py
 
+# Inputs/outputs
+*.json
+/output/
+/temp/
+*.csv
+
 # Standard annoying things
 .vscode
 .ipynb_checkpoints
 __pycache__
 .DS_Store
 *.ipynb
-*.json
-/output/
-/temp/
-*.csv
