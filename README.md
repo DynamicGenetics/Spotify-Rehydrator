@@ -23,3 +23,6 @@ you can start the script again and it will pick up where it left off. You can de
 ## Good to know
 - Not all trackIDs can be retreived. In our experience about 5% of tracks cannot be found on the API. These will have a value of NONE in the output files.  
 - This programme is optimised for British listeners. If you are running it elsewhere you may want to try changing the 'market' argument in the function `get_URIs` in `functions.py`. More information about this is [available in Spotify's documentation](https://developer.spotify.com/documentation/web-api/reference/#endpoint-search). 
+
+
+Thanks to [Pixel perfect](https://www.flaticon.com/authors/pixel-perfect) for the title [icon](https://www.flaticon.com/). 🙂 
