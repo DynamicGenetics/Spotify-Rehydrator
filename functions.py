@@ -153,7 +153,7 @@ def add_URI(sp, file: pd.DataFrame):
     if not os.path.exists("temp"):
         os.mkdir("temp")
     matched.to_csv(
-        os.path.join("temp", "uri_matched.csv"), sep="\t"
+        os.path.join("temp", "uri_matched.csv"), sep="\t", index=False
     )  # Tab seperated values
     print(
         """I've added the URIs to the original dataset and saved it to the output folder."""
@@ -190,7 +190,7 @@ def add_features_cols(sp, df: pd.DataFrame):
     # Turn the features dictionary to a dataframe.
     feature_df = pd.DataFrame.from_records(feature_dict)
     # Write the features to the output file.
-    feature_df.to_csv(os.path.join("temp", "features_alone.csv"), sep="\t")
+    feature_df.to_csv(os.path.join("temp", "features_alone.csv"), sep="\t", index=False)
 
     # Merge this dataframe into the main dataframe so every listening event has associated data.
     df = pd.merge(df, feature_df, how="left", left_on="trackID", right_on="uri")
@@ -201,13 +201,13 @@ def add_features_cols(sp, df: pd.DataFrame):
     # Save it to csv too.
     if not os.path.exists("output"):
         os.mkdir("output")
-    df.to_csv(os.path.join("output", "hydrated_data.csv"), sep="\t")
+    df.to_csv(os.path.join("output", "hydrated_data.csv"), sep="\t", index=False)
 
     return df
 
 
 def hydrate(sp):
-    """Run the re-hydration functionn in the correct order."""
+    """Run the re-hydration function in the correct order."""
 
     df = read_files()
     df = add_URI(sp, df)
