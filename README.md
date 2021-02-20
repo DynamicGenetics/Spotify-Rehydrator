@@ -1,14 +1,14 @@
 <img src="https://github.com/DynamicGenetics/Spotify-Rehydrator/blob/main/docs/image.png?raw=true" width="500px" alt="Spotify Rehydrator">
 
-This utility recreates a full dataset of audio features of songs downloaded through Spotify's 'download my data' facility.  
-It requires the files named `StreamingHistory{n}.json` where {n} represents the file number that starts at 0, and goes up to however many files were retrieved.   
+Recreate a full dataset of audio features of songs downloaded through Spotify's 'download my data' facility.  
+This requires the files named `StreamingHistory{n}.json` where {n} represents the file number that starts at 0, and goes up to however many files were retrieved.   
 
 The code can be used as it is, or can be altered to suit your requirements with some minor changes. For instance, making a different query on the trackIDs.  
 
 ## How to use it
 1. Download this repository to your computer.  
 2. Put all of your `StreamingHistory.json` files in the sub-folder `input`. If these files are from multiple people and you want each of their files labelled then make sure each file has a unique ID for each person as the prefix, separated by an underscore. E.G. `person001_StreamingHistory0.json`, `person001_StreamingHistory1.json` etc.   
-3. Put your Spotify Developer credentials in the `secrets.py` file.  
+3. Put your Spotify Developer credentials in a file called `secrets.py` file, in the top level of the repository.  A template is provided in [`secrets-example.py`](https://github.com/DynamicGenetics/Spotify-Rehydrator/blob/main/docs/secrets-example.py)
 4. Run the `rehydrate.py` file.  
 
 ## How it works
