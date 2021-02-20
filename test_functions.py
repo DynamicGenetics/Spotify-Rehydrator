@@ -4,9 +4,27 @@ Functions that solely perform API calls are not tested since API functionality i
 """
 
 import pytest
-from functions import unmatched_tracks
+import os
+from functions import get_ids
 
 
-class TestUnmatchedTracks:
-    def test_unmatched_tracks():
-        
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        (
+            [
+                "person1_StreamingHistory0.json",
+                "person1_StreamingHistory1.json",
+                "person2_StreamingHistory0.json",
+            ],
+            ["person1", "person2"],
+        ),
+        (["StreamingHistory0.json", "StreamingHistory1.json"], None),
+    ],
+)
+def test_getids(input, expected):
+    try:
+        assert sorted(get_ids(input)) == sorted(expected)
+    except TypeError:  # You can't sort None
+        assert get_ids(input) == expected
+

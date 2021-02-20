@@ -12,40 +12,30 @@ from tqdm.auto import tqdm  # https://github.com/tqdm/tqdm
 logger = logging.getLogger(__name__)
 
 
-def get_ids():
+def get_ids(file_list: list):
     """Get a list of all the participant ids in the input folder.
     Write them to a.txt file in the temp folder. Return if None if
     there are no ids."""
 
-    # Get a list of all the files in the input folder
-    file_list = os.listdir("./input/")
-
     # Initialise id list
-    ids = []
+    ids = set()
 
     # Get the unique ids for each file.
     for file in file_list:
         if file.endswith(".json"):
             # Get the unique user ID
-            try:
-                person_id = file.split(sep="_")[0]
-                ids.append(person_id)
+            name_split = file.split(sep="_")
+            # If it has split into 2 parts
+            if len(name_split) > 1:
+                ids.add(file.split(sep="_")[0])
             # If there are no files with ids then pass
-            except IndexError:
+            else:
                 pass
 
-    # If ids exist then write it out
-    if not os.path.exists("temp"):
-        os.mkdir("temp")
-
     if ids:
-        with open(os.path.join("temp", "ids.txt"), "w") as output:
-            output.write(str(ids))
-        return ids
+        return list(ids)
     else:
-        ids = None
-
-    return ids
+        return None
 
 
 def read(person_id=None):
@@ -88,7 +78,7 @@ def read(person_id=None):
                 # Add this dict to the list
                 data.extend(loaded_dict)  # Read data frame from json file
 
-        logger.info("All done, I've read all the files.")
+    logger.info("---> All done, I've read all the files.")
 
     # Export this as a dataframe.
     return pd.DataFrame.from_records(data)
@@ -313,7 +303,8 @@ def run_pipeline(sp, person_id=None):
 
 def rehydrate(sp):
 
-    ids = get_ids()
+    # Get ids by passing the list of files in the input folder.
+    ids = get_ids(os.listdir("./input/"))
 
     # If there are no seperate participants the run the pipeline with no participant_id
     if ids is None:
