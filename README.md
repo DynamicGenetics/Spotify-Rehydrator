@@ -1,5 +1,8 @@
 <img src="https://github.com/DynamicGenetics/Spotify-Rehydrator/blob/main/docs/image.png?raw=true" width="500px" alt="Spotify Rehydrator">
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+
 Recreate a full dataset of audio features of songs downloaded through Spotify's 'download my data' facility.  
 This requires the files named `StreamingHistory{n}.json` where {n} represents the file number that starts at 0, and goes up to however many files were retrieved.   
 
