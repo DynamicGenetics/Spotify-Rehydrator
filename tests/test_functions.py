@@ -6,8 +6,9 @@ Functions that solely perform API calls are not tested since API functionality i
 import pytest
 import pathlib
 import os
+import pandas as pd
 
-from rehydrator.functions import get_ids, read
+from rehydrator.functions import get_ids, read, unmatched_tracks
 
 test_data_path = os.path.join(pathlib.Path(__file__).parent.absolute(), "input")
 
@@ -69,3 +70,21 @@ def test_read_cols(path, person_id):
         assert set(df.columns) == set(
             (["msPlayed", "endTime", "artistName", "trackName"])
         )
+
+
+def test_unmatched_tracks(new, existing, person):
+    new = pd.DataFrame(
+        {
+            "artistName": ["Artist1", "Artist2", "Artist3", "Artist3"],
+            "trackName": ["Track A", "Track B", "Track C", "Track C"],
+        }
+    )
+
+    existing = pd.DataFrame(
+        {
+            "artistName": ["Artist1", "Artist2", "Artist3", "Artist3"],
+            "trackName": ["Track A", "Track B", "Track C", "Track C"],
+        }
+    )
+
+    matched = unmatched_tracks(new_df=new, existing_df=existing, person_id=person_id)

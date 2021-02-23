@@ -85,43 +85,31 @@ def read(path, person_id=None):
     return pd.DataFrame.from_records(data)
 
 
-def unmatched_tracks(new_tracks: pd.DataFrame, person_id=None):
+def unmatched_tracks(new_df: pd.DataFrame, existing_df: pd.DataFrame, person_id=None):
     """Compares any existing `uri_matched.tsv` files with the current tracks to be matched
     and only returns unmatched tracks to save API calls.
 
     This function expects a dataframe of two columns 'artistName' and 'trackName'.
     """
-    # It might be that we have already run this before. So first, lets check for an existing file.
-    try:
-        if person_id:
-            existing_df = pd.read_csv(
-                os.path.join("temp", person_id + "_uri_matched.tsv"), sep="\t"
-            )
-        else:
-            existing_df = pd.read_csv(os.path.join("temp", "uri_matched.tsv"), sep="\t")
-        existing_tracks = existing_df[["artistName", "trackName"]].drop_duplicates()
 
-        # If they are the same then there are no tracks to process.
-        if existing_tracks.equals(new_tracks):
-            return None
-        # If they are different, get the tracks in the current df that aren't in the existing one.
-        # These will be the API calls we still need to make.
-        else:
-            # To find new only tracks, do a left join.
-            unmatched = new_tracks.merge(
-                existing_tracks,
-                on=["artistName", "trackName"],
-                how="left",
-                indicator=True,
-            )
-            # Only keep rows which were 'left_only' rather than 'both'
-            unmatched = unmatched[unmatched["_merge"] == "left_only"]
-            # Keep just the relevant columns when returning the data.
-            return unmatched[["artistName", "trackName"]]
+    # Select artist and track name, then duplicates from both dataframes
+    existing_tracks = existing_df[["artistName", "trackName"]].drop_duplicates()
+    new_tracks = new_df[["artistName", "trackName"]].drop_duplicates()
 
-    # If the file doesn't exist then we just and process everything :)
-    except FileNotFoundError:
-        return new_tracks
+    # If they are the same then there are no tracks to process.
+    if existing_tracks.equals(new_tracks):
+        return None
+    # If they are different, get the tracks in the current df that aren't in the existing one.
+    # These will be the API calls we still need to make.
+    else:
+        # To find new only tracks, do a left join.
+        unmatched = new_tracks.merge(
+            existing_tracks, on=["artistName", "trackName"], how="left", indicator=True,
+        )
+        # Only keep rows which were 'left_only' rather than 'both'
+        unmatched = unmatched[unmatched["_merge"] == "left_only"]
+        # Keep just the relevant columns when returning the data.
+        return unmatched[["artistName", "trackName"]]
 
 
 def get_URI(sp, artist, track):
@@ -136,24 +124,28 @@ def get_URI(sp, artist, track):
 def add_URI(sp, file: pd.DataFrame, person_id=None):
     """Add the track URI/ID as a column at the end of the dataframe"""
 
-    # Subset the file to only be the artist and track name
-    # Then get the unique artist/track combinations to reduce the number of API calls.
-    tracks = file[["artistName", "trackName"]].drop_duplicates()
-
-    # Reduce this to just the unmatched tracks
-    tracks = unmatched_tracks(tracks, person_id)
-
-    # If unmatched_tracks returned empty, then exit here and return the existing file.
-    if tracks is None:
-        logger.info(
-            """---> There are no new tracks to find so I'm just returning the existing file."""
-        )
-        if person_id:
-            return pd.read_csv(
+    # First, lets see if any of these tracks have previously been matched.
+    try:
+        if person_id is not None:
+            existing_df = pd.read_csv(
                 os.path.join("temp", person_id + "_uri_matched.tsv"), sep="\t"
             )
         else:
-            return pd.read_csv(os.path.join("temp", "uri_matched.tsv"), sep="\t")
+            existing_df = pd.read_csv(os.path.join("temp", "uri_matched.tsv"), sep="\t")
+
+        tracks = unmatched_tracks(file, existing_df, person_id)
+
+        # If unmatched_tracks returned empty, then exit here and return the existing file.
+        if tracks is None:
+            logger.info(
+                """---> There are no new tracks to find so I'm just returning the existing file."""
+            )
+            return existing_df
+
+    # If the file doesn't exist then we just process everything :)
+    except FileNotFoundError:
+        # Subset the file to only be unique combos of artist and track name
+        tracks = file[["artistName", "trackName"]].drop_duplicates()
 
     # Print this to the console.
     logger.info(
