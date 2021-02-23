@@ -3,6 +3,7 @@ Module containing the 'worker' functions for the rehydration process.
 These include input/output and API calls.
 """
 import os
+import pathlib
 import logging
 import pandas as pd
 import simplejson as json
@@ -38,22 +39,22 @@ def get_ids(file_list: list):
         return None
 
 
-def read(person_id=None):
+def read(path, person_id=None):
     """Read in the .json files from input folder. If person_id is passed, it will only read
     files that start with the person_id. Returns a dataframe of file content with an
     additional column for person_id if included."""
 
     data = []  # an empty list to store the json files
 
-    files = os.listdir("./input/")
+    files = os.listdir(path)
 
     # If person_id was passed as an argument
     if person_id:
         # Read each file
         for file in files:
             if file.startswith(person_id):
-                # Make the full filepath for reading the file.
-                file = os.path.join("input", file)
+                # Make the full filepath for rqeading the file.
+                file = os.path.join(path, file)
 
                 # For this file, load the json to a dict, and add the ID as a key/value.
                 with open(file) as f:
@@ -68,9 +69,9 @@ def read(person_id=None):
     else:
         # Read each file
         for file in files:
-            if file.endwith(".json"):
+            if file.endswith(".json"):
                 # Make the full filepath for reading the file.
-                file = os.path.join("input", file)
+                file = os.path.join(path, file)
                 # For this file, load the json to a dict.
                 with open(file) as f:
                     loaded_dict = json.load(f)
@@ -85,7 +86,7 @@ def read(person_id=None):
 
 
 def unmatched_tracks(new_tracks: pd.DataFrame, person_id=None):
-    """Compares any existing `uri_matched.csv` files with the current tracks to be matched
+    """Compares any existing `uri_matched.tsv` files with the current tracks to be matched
     and only returns unmatched tracks to save API calls.
 
     This function expects a dataframe of two columns 'artistName' and 'trackName'.
@@ -94,10 +95,10 @@ def unmatched_tracks(new_tracks: pd.DataFrame, person_id=None):
     try:
         if person_id:
             existing_df = pd.read_csv(
-                os.path.join("temp", person_id + "_uri_matched.csv"), sep="\t"
+                os.path.join("temp", person_id + "_uri_matched.tsv"), sep="\t"
             )
         else:
-            existing_df = pd.read_csv(os.path.join("temp", "uri_matched.csv"), sep="\t")
+            existing_df = pd.read_csv(os.path.join("temp", "uri_matched.tsv"), sep="\t")
         existing_tracks = existing_df[["artistName", "trackName"]].drop_duplicates()
 
         # If they are the same then there are no tracks to process.
@@ -149,10 +150,10 @@ def add_URI(sp, file: pd.DataFrame, person_id=None):
         )
         if person_id:
             return pd.read_csv(
-                os.path.join("temp", person_id + "_uri_matched.csv"), sep="\t"
+                os.path.join("temp", person_id + "_uri_matched.tsv"), sep="\t"
             )
         else:
-            return pd.read_csv(os.path.join("temp", "uri_matched.csv"), sep="\t")
+            return pd.read_csv(os.path.join("temp", "uri_matched.tsv"), sep="\t")
 
     # Print this to the console.
     logger.info(
@@ -202,11 +203,11 @@ def add_URI(sp, file: pd.DataFrame, person_id=None):
 
     if person_id:
         matched.to_csv(
-            os.path.join("temp", person_id + "_uri_matched.csv"), sep="\t", index=False
+            os.path.join("temp", person_id + "_uri_matched.tsv"), sep="\t", index=False
         )  # Tab seperated values
     else:
         matched.to_csv(
-            os.path.join("temp", "uri_matched.csv"), sep="\t", index=False
+            os.path.join("temp", "uri_matched.tsv"), sep="\t", index=False
         )  # Tab seperated values
     logger.info(
         """---> I've added the URIs to this dataset and saved it to the output folder."""
@@ -256,13 +257,13 @@ def add_features_cols(sp, df: pd.DataFrame, person_id=None):
     # Write the features to the output file.
     if person_id:
         feature_df.to_csv(
-            os.path.join("temp", person_id + "_uri_to_features.csv"),
+            os.path.join("temp", person_id + "_uri_to_features.tsv"),
             sep="\t",
             index=False,
         )
     else:
         feature_df.to_csv(
-            os.path.join("temp", "uri_to_features.csv"), sep="\t", index=False
+            os.path.join("temp", "uri_to_features.tsv"), sep="\t", index=False
         )
 
     # Merge this dataframe into the main dataframe so every listening event has associated data.
@@ -279,10 +280,10 @@ def add_features_cols(sp, df: pd.DataFrame, person_id=None):
 
     if person_id:
         df.to_csv(
-            os.path.join("output", person_id + "_hydrated.csv"), sep="\t", index=False
+            os.path.join("output", person_id + "_hydrated.tsv"), sep="\t", index=False
         )
     else:
-        df.to_csv(os.path.join("output", "hydrated.csv"), sep="\t", index=False)
+        df.to_csv(os.path.join("output", "hydrated.tsv"), sep="\t", index=False)
 
     return df
 
@@ -293,7 +294,10 @@ def run_pipeline(sp, person_id=None):
     if person_id:
         logging.info("Rehydrating {}".format(person_id))
 
-    df = read(person_id)
+    df = read(
+        path=os.path.join(pathlib.Path(__file__).parent.absolute(), "input"),
+        person_id=person_id,
+    )
     df = add_URI(sp, df, person_id)
     df = add_features_cols(sp, df, person_id)
 
@@ -303,16 +307,18 @@ def run_pipeline(sp, person_id=None):
 
 def rehydrate(sp):
 
-    # Get ids by passing the list of files in the input folder.
-    ids = get_ids(os.listdir("./input/"))
+    # Get ids by passing the list of files in the sub-folder input (relative to this file)
+    ids = get_ids(
+        os.listdir(os.path.join(pathlib.Path(__file__).parent.absolute(), "input"))
+    )
 
     # If there are no seperate participants the run the pipeline with no participant_id
     if ids is None:
-        if not os.path.isfile(os.path.join("output", "hydrated.csv")):
+        if not os.path.isfile(os.path.join("output", "hydrated.tsv")):
             run_pipeline(sp)
         else:
             logger.info(
-                """There is already a hydrated.csv file in output. Remove this
+                """There is already a hydrated.tsv file in output. Remove this
             file if you want to run the rehydrator again for new data."""
             )
     else:  # Otherwise, iterate over all the participants.
@@ -321,7 +327,7 @@ def rehydrate(sp):
             # Print update on how many there are to go
             logger.info("{} of {}".format(index, len(ids)))
 
-            if not os.path.isfile(os.path.join("output", person_id + "_hydrated.csv")):
+            if not os.path.isfile(os.path.join("output", person_id + "_hydrated.tsv")):
                 run_pipeline(sp, person_id)
             else:
                 logger.info(
