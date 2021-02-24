@@ -6,9 +6,9 @@ Functions that solely perform API calls are not tested since API functionality i
 import pytest
 import pathlib
 import os
-import pandas as pd
 
 from rehydrator.functions import get_ids, read, unmatched_tracks
+from tests.mock_data import UNMATCHED_NEW_1, UNMATCHED_EXIST_1, UNMATCHED_EXIST_2
 
 test_data_path = os.path.join(pathlib.Path(__file__).parent.absolute(), "input")
 
@@ -72,19 +72,22 @@ def test_read_cols(path, person_id):
         )
 
 
-def test_unmatched_tracks(new, existing, person):
-    new = pd.DataFrame(
-        {
-            "artistName": ["Artist1", "Artist2", "Artist3", "Artist3"],
-            "trackName": ["Track A", "Track B", "Track C", "Track C"],
-        }
-    )
+@pytest.mark.parametrize(
+    "new, existing, rows_out",
+    [
+        (UNMATCHED_NEW_1, UNMATCHED_EXIST_1, 1),
+        (UNMATCHED_NEW_1, UNMATCHED_EXIST_2, None),
+    ],
+)
+def test_unmatched_tracks(new, existing, rows_out):
+    to_match = unmatched_tracks(new_df=new, existing_df=existing)
 
-    existing = pd.DataFrame(
-        {
-            "artistName": ["Artist1", "Artist2", "Artist3", "Artist3"],
-            "trackName": ["Track A", "Track B", "Track C", "Track C"],
-        }
-    )
+    try:
+        print(to_match)
+        assert to_match.shape[0] == rows_out
+    except AttributeError as e:  # Raised if df is None
+        if rows_out is None:
+            pass  # If it's supposed to be None then no problem!
+        else:  # Otherwise, raise it.
+            raise e
 
-    matched = unmatched_tracks(new_df=new, existing_df=existing, person_id=person_id)
