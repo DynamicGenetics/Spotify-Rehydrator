@@ -85,11 +85,12 @@ def read(path, person_id=None):
     return pd.DataFrame.from_records(data)
 
 
-def unmatched_tracks(new_df: pd.DataFrame, existing_df: pd.DataFrame, person_id=None):
-    """Compares any existing `uri_matched.tsv` files with the current tracks to be matched
+def unmatched_tracks(new_df: pd.DataFrame, existing_df: pd.DataFrame):
+    """Compares any existing URI matched datasets with the current tracks to be matched
     and only returns unmatched tracks to save API calls.
 
-    This function expects a dataframe of two columns 'artistName' and 'trackName'.
+    This function expects one new and one 'existing' dataframe which it is to compare.
+    It will also accept a person_id argument if that is given.
     """
 
     # Select artist and track name, then duplicates from both dataframes
@@ -133,7 +134,7 @@ def add_URI(sp, file: pd.DataFrame, person_id=None):
         else:
             existing_df = pd.read_csv(os.path.join("temp", "uri_matched.tsv"), sep="\t")
 
-        tracks = unmatched_tracks(file, existing_df, person_id)
+        tracks = unmatched_tracks(file, existing_df)
 
         # If unmatched_tracks returned empty, then exit here and return the existing file.
         if tracks is None:
