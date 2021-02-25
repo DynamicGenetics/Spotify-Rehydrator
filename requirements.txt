@@ -1,5 +1,4 @@
 simplejson>=3.17     # https://github.com/simplejson/simplejson
 spotipy>=2.16        # https://github.com/plamere/spotipy
-tqdm>=4.56           # https://github.com/tqdm/tqdm
 pandas>=1.2          # https://github.com/pandas-dev/pandas
-alive_progress>=1.6
+alive_progress>=1.6  # https://github.com/rsalmei/alive-progress

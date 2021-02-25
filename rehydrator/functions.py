@@ -3,13 +3,11 @@ Module containing the 'worker' functions for the rehydration process.
 These include input/output and API calls.
 """
 import os
-import sys
 import pathlib
 import logging
 import pandas as pd
 import simplejson as json
 
-from tqdm.auto import tqdm  # https://github.com/tqdm/tqdm
 from alive_progress import alive_bar
 
 logger = logging.getLogger(__name__)
@@ -264,8 +262,10 @@ def add_features_cols(sp, df: pd.DataFrame, person_id=None):
 
     # Get the features for each unique track. Iterate in batches of 100 because the audio_features API
     # can handle batches up to that size.
-    for i in tqdm(range(0, len(unique_tracks), 100)):
-        get_features(sp, unique_tracks[i : i + 100])
+    with alive_bar(len(unique_tracks), spinner="dots_recur") as bar:
+        for i in range(0, len(unique_tracks), 100):
+            get_features(sp, unique_tracks[i : i + 100])
+            bar()
 
     # Turn the features dictionary to a dataframe.
     feature_df = pd.DataFrame.from_records(feature_dict)
