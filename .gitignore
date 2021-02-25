@@ -1,10 +1,12 @@
 # Files
 secrets.py
+rehydrator/secrets.py
 
 # Inputs/outputs
 *.json
-/output/
-/temp/
+input/
+output/
+temp/
 *.csv
 
 # Standard annoying things

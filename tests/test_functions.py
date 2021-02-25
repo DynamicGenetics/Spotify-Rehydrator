@@ -7,8 +7,7 @@ import pytest
 import pathlib
 import os
 
-from rehydrator.functions import get_ids, read, unmatched_tracks
-from tests.mock_data import UNMATCHED_NEW_1, UNMATCHED_EXIST_1, UNMATCHED_EXIST_2
+from rehydrator.functions import get_user_ids, read, unmatched_tracks
 
 test_data_path = os.path.join(pathlib.Path(__file__).parent.absolute(), "input")
 
@@ -32,9 +31,9 @@ def test_getids(input, expected):
     IDs and no IDs.
     """
     try:
-        assert sorted(get_ids(input)) == sorted(expected)
+        assert sorted(get_user_ids(input)) == sorted(expected)
     except TypeError:  # You can't sort None
-        assert get_ids(input) == expected
+        assert get_user_ids(input) == expected
 
 
 @pytest.mark.parametrize(
