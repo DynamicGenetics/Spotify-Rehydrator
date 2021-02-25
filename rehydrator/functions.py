@@ -90,7 +90,7 @@ def read(path, person_id=None):
 
 def unmatched_tracks(new_df: pd.DataFrame, existing_df: pd.DataFrame, person_id=None):
 
-    """Compares any existing `uri_matched.tsv` files with the current tracks to be matched
+    """Compares any existing `id_matched.tsv` files with the current tracks to be matched
     and only returns unmatched tracks to save API calls.
 
     This function expects a dataframe of two columns 'artistName' and 'trackName'.
@@ -116,39 +116,29 @@ def unmatched_tracks(new_df: pd.DataFrame, existing_df: pd.DataFrame, person_id=
         return unmatched[["artistName", "trackName"]]
 
 
-def get_URI(sp, artist, track):
+def get_track(sp, artist, track):
 
-    """Get the track URI by searching the Spotify API for the name and title"""
+    """Get the track ID by searching the Spotify API for the name and title"""
 
     results = sp.search(
         q="artist:" + artist + " track:" + track, type="track", market="GB"
     )
     # Return the first result from this search
-    return results["tracks"]["items"][0]["uri"]
+    return results["tracks"]["items"][0]["id"]
 
 
-def add_URI(sp, file: pd.DataFrame, person_id=None):
+def add_track_id(sp, file: pd.DataFrame, person_id=None):
 
-    """Add the track URI/ID as a column at the end of the dataframe"""
-
-    def get_track(artist, track):
-
-        """Given a track name and artist name, search the Spotify API and return
-        the trackID of the first result. """
-
-        results = sp.search(
-            q="artist:" + artist + " track:" + track, type="track", market="GB"
-        )
-        return results["tracks"]["items"][0]["id"]
+    """Add the track ID as a column at the end of the dataframe."""
 
     # First, lets see if any of these tracks have previously been matched.
     try:
         if person_id is not None:
             existing_df = pd.read_csv(
-                os.path.join("temp", person_id + "_uri_matched.tsv"), sep="\t"
+                os.path.join("temp", person_id + "_id_matched.tsv"), sep="\t"
             )
         else:
-            existing_df = pd.read_csv(os.path.join("temp", "uri_matched.tsv"), sep="\t")
+            existing_df = pd.read_csv(os.path.join("temp", "id_matched.tsv"), sep="\t")
 
         tracks = unmatched_tracks(file, existing_df, person_id)
 
@@ -171,22 +161,27 @@ def add_URI(sp, file: pd.DataFrame, person_id=None):
         )
     )
 
+    # Add a new empty row for the trackID
+    tracks["trackID"] = ""
+
     with alive_bar(len(tracks.index), spinner="dots_recur") as bar:
         # For each artist and track name in the dataframe...
         for i, row in tracks.iterrows():
             try:
                 tracks["trackID"][i] = get_track(
-                    tracks["artistName"][i], tracks["trackName"][i]
+                    sp, tracks["artistName"][i], tracks["trackName"][i]
                 )
             except IndexError:
                 try:  # remove apostrophes (most common problem)
                     tracks["trackID"][i] = get_track(
+                        sp,
                         tracks["artistName"][i].replace("'", ""),
                         tracks["trackName"][i].replace("'", ""),
                     )
                 except IndexError:
                     try:  # remove dash and a space (2nd most common problem)
                         tracks["trackID"][i] = get_track(
+                            sp,
                             tracks["artistName"][i].replace("- ", ""),
                             tracks["trackName"][i].replace("- ", ""),
                         )
@@ -215,21 +210,21 @@ def add_URI(sp, file: pd.DataFrame, person_id=None):
 
     if person_id:
         matched.to_csv(
-            os.path.join("temp", person_id + "_uri_matched.tsv"), sep="\t", index=False
+            os.path.join("temp", person_id + "_id_matched.tsv"), sep="\t", index=False
         )  # Tab seperated values
     else:
         matched.to_csv(
-            os.path.join("temp", "uri_matched.tsv"), sep="\t", index=False
+            os.path.join("temp", "id_matched.tsv"), sep="\t", index=False
         )  # Tab seperated values
     logger.info(
-        """---> I've added the URIs to this dataset and saved it to the output folder."""
+        """---> I've added the track IDs to this dataset and saved it to the output folder."""
     )
 
     # Return the matched dataframe.
     return matched
 
 
-def add_features_cols(sp, df: pd.DataFrame, person_id=None):
+def add_track_features(sp, df: pd.DataFrame, person_id=None):
 
     """Gets the track features for all the rows in the df based on trackID column."""
 
@@ -250,11 +245,13 @@ def add_features_cols(sp, df: pd.DataFrame, person_id=None):
     # Init empty list
     feature_dict = []
 
-    def get_features(sp, uri_list):
-        """Get a dictionary of track features from a list of URI, and append to list.
+    def get_features(sp, id_list):
+
+        """Get a dictionary of track features from a list of track IDs, and append to list.
         Documentation for this endpoint is here
         https://developer.spotify.com/documentation/web-api/reference/#endpoint-get-several-audio-features"""
-        features = sp.audio_features(uri_list)
+
+        features = sp.audio_features(id_list)
 
         for feature_set in features:
             if feature_set:  # If is is not empty
@@ -262,10 +259,11 @@ def add_features_cols(sp, df: pd.DataFrame, person_id=None):
 
     # Get the features for each unique track. Iterate in batches of 100 because the audio_features API
     # can handle batches up to that size.
-    with alive_bar(len(unique_tracks), spinner="dots_recur") as bar:
-        for i in range(0, len(unique_tracks), 100):
-            get_features(sp, unique_tracks[i : i + 100])
-            bar()
+
+    # with alive_bar(len(unique_tracks) % 100, spinner="dots_recur") as bar: # Can't get bar to work
+    for i in range(0, len(unique_tracks), 100):
+        get_features(sp, unique_tracks[i : i + 100])
+    #        bar()
 
     # Turn the features dictionary to a dataframe.
     feature_df = pd.DataFrame.from_records(feature_dict)
@@ -273,17 +271,17 @@ def add_features_cols(sp, df: pd.DataFrame, person_id=None):
     # Write the features to the output file.
     if person_id:
         feature_df.to_csv(
-            os.path.join("temp", person_id + "_uri_to_features.tsv"),
+            os.path.join("temp", person_id + "_id_to_features.tsv"),
             sep="\t",
             index=False,
         )
     else:
         feature_df.to_csv(
-            os.path.join("temp", "uri_to_features.tsv"), sep="\t", index=False
+            os.path.join("temp", "id_to_features.tsv"), sep="\t", index=False
         )
 
     # Merge this dataframe into the main dataframe so every listening event has associated data.
-    df = pd.merge(df, feature_df, how="left", left_on="trackID", right_on="uri")
+    df = pd.merge(df, feature_df, how="left", left_on="trackID", right_on="id")
 
     logger.info(
         "---> I've found the features and now I'll write them to the output folder"
@@ -315,8 +313,8 @@ def run_pipeline(sp, person_id=None):
         path=os.path.join(pathlib.Path(__file__).parent.absolute(), "input"),
         person_id=person_id,
     )
-    df = add_URI(sp, df, person_id)
-    df = add_features_cols(sp, df, person_id)
+    df = add_track_id(sp, df, person_id)
+    df = add_track_features(sp, df, person_id)
 
     if person_id:
         logger.info("---> Finished {}.".format(person_id))
