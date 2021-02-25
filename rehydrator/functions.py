@@ -3,17 +3,20 @@ Module containing the 'worker' functions for the rehydration process.
 These include input/output and API calls.
 """
 import os
+import sys
 import pathlib
 import logging
 import pandas as pd
 import simplejson as json
 
 from tqdm.auto import tqdm  # https://github.com/tqdm/tqdm
+from alive_progress import alive_bar
 
 logger = logging.getLogger(__name__)
 
 
-def get_ids(file_list: list):
+def get_user_ids(file_list: list):
+
     """Get a list of all the participant ids in the input folder.
     Write them to a.txt file in the temp folder. Return if None if
     there are no ids."""
@@ -32,6 +35,7 @@ def get_ids(file_list: list):
             # If there are no files with ids then pass
             else:
                 pass
+                #~ should this be "can't find anyone, exiting?"
 
     if ids:
         return list(ids)
@@ -40,6 +44,7 @@ def get_ids(file_list: list):
 
 
 def read(path, person_id=None):
+
     """Read in the .json files from input folder. If person_id is passed, it will only read
     files that start with the person_id. Returns a dataframe of file content with an
     additional column for person_id if included."""
@@ -80,7 +85,7 @@ def read(path, person_id=None):
                 data.extend(loaded_dict)  # Read data frame from json file
 
     logger.info("---> All done, I've read all the files.")
-
+    #~ what kind of files? make the logger more explicit?
     # Export this as a dataframe.
     return pd.DataFrame.from_records(data)
 
@@ -124,6 +129,13 @@ def get_URI(sp, artist, track):
 def add_URI(sp, file: pd.DataFrame, person_id=None):
     """Add the track URI/ID as a column at the end of the dataframe"""
 
+    def get_track(artist, track):
+        """Given a track name and artist name, search the Spotify API and return
+        the trackID of the first result."""
+        results = sp.search(q="artist:" + artist + " track:" + track,
+                            type="track", market="GB")
+        return results["tracks"]["items"][0]["id"]
+
     # First, lets see if any of these tracks have previously been matched.
     try:
         if person_id is not None:
@@ -150,41 +162,31 @@ def add_URI(sp, file: pd.DataFrame, person_id=None):
     # Print this to the console.
     logger.info(
         """---> I'm going to search the Spotify API now for {} tracks""".format(
-            len(tracks)
-        )
-    )
+            len(tracks)))
 
-    # Initialise empty list of trackIDs
-    trackIDs = []
-
-    # tqdm is a progress bar
-    with tqdm(total=len(tracks.index)) as pbar:
+    with alive_bar(len(tracks.index), spinner="dots_recur") as bar:
         # For each artist and track name in the dataframe...
-        for artist, track in tqdm(zip(tracks["artistName"], tracks["trackName"])):
-
-            # Try to get the track and append it to the list.
+        for i, row in tracks.iterrows():
             try:
-                trackIDs.append(get_URI(sp, artist, track))
-
-            # These errors come up if there are issues with the API
+                tracks["trackID"][i] = get_track(tracks["artistName"][i],
+                                                 tracks["trackName"][i])
             except IndexError:
-                trackIDs.append("NONE")
-            except TypeError:
-                trackIDs.append("NONE")
-
-            # Update the progress bar
-            pbar.update(1)
-
-    logger.info(
-        "---> I've searched for all the tracks. In total {} did not have a URI returned by the API.".format(
-            trackIDs.count("NONE")
-        )
-    )
-
-    # Add a new empty column to the tracks dataframe.
-    tracks["trackID"] = ""
-    # Attach the trackIDS list as a column to the dataframe
-    tracks = tracks.assign(trackID=trackIDs)
+                try: # remove apostrophes (most common problem)
+                    tracks["trackID"][i] = get_track(tracks["artistName"][i].replace("'", ""),
+                                                     tracks["trackName"][i].replace("'", ""))
+                except IndexError:
+                    try: # remove dash and a space (2nd most common problem)
+                        tracks["trackID"][i] = get_track(tracks["artistName"][i].replace("- ", ""),
+                                                         tracks["trackName"][i].replace("- ", ""))
+                    except IndexError: # other punctuation / spelling error, ~1.5% spotify records
+                        tracks["trackID"][i] = "MISSING"
+                        logger.info("---> {} not found.".format((tracks["artistName"][i],
+                                                                 tracks["trackName"][i])))
+            except Exception as e: # other errors
+                tracks["trackID"][i] = "ERROR", e
+                logger.info("---> {} caused an error {}.".format((tracks["artistName"][i],
+                                                              tracks["trackName"][i]), e))
+            bar()
 
     # Now we need to match the trackIDs back to the main dataset observations
     matched = pd.merge(file, tracks, how="left", on=["artistName", "trackName"])
@@ -300,7 +302,7 @@ def run_pipeline(sp, person_id=None):
 def rehydrate(sp):
 
     # Get ids by passing the list of files in the sub-folder input (relative to this file)
-    ids = get_ids(
+    ids = get_user_ids(
         os.listdir(os.path.join(pathlib.Path(__file__).parent.absolute(), "input"))
     )
 
