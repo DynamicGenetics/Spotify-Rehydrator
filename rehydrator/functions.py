@@ -35,7 +35,7 @@ def get_user_ids(file_list: list):
             # If there are no files with ids then pass
             else:
                 pass
-                #~ should this be "can't find anyone, exiting?"
+                # ~ should this be "can't find anyone, exiting?"
 
     if ids:
         return list(ids)
@@ -84,13 +84,14 @@ def read(path, person_id=None):
                 # Add this dict to the list
                 data.extend(loaded_dict)  # Read data frame from json file
 
-    logger.info("---> All done, I've read all the files.")
-    #~ what kind of files? make the logger more explicit?
+    logger.info("---> All done, I've read all the files. ")
+    # ~ what kind of files? make the logger more explicit?
     # Export this as a dataframe.
     return pd.DataFrame.from_records(data)
 
 
 def unmatched_tracks(new_df: pd.DataFrame, existing_df: pd.DataFrame, person_id=None):
+
     """Compares any existing `uri_matched.tsv` files with the current tracks to be matched
     and only returns unmatched tracks to save API calls.
 
@@ -118,7 +119,9 @@ def unmatched_tracks(new_df: pd.DataFrame, existing_df: pd.DataFrame, person_id=
 
 
 def get_URI(sp, artist, track):
+
     """Get the track URI by searching the Spotify API for the name and title"""
+
     results = sp.search(
         q="artist:" + artist + " track:" + track, type="track", market="GB"
     )
@@ -127,13 +130,17 @@ def get_URI(sp, artist, track):
 
 
 def add_URI(sp, file: pd.DataFrame, person_id=None):
+
     """Add the track URI/ID as a column at the end of the dataframe"""
 
     def get_track(artist, track):
+
         """Given a track name and artist name, search the Spotify API and return
-        the trackID of the first result."""
-        results = sp.search(q="artist:" + artist + " track:" + track,
-                            type="track", market="GB")
+        the trackID of the first result. """
+
+        results = sp.search(
+            q="artist:" + artist + " track:" + track, type="track", market="GB"
+        )
         return results["tracks"]["items"][0]["id"]
 
     # First, lets see if any of these tracks have previously been matched.
@@ -162,30 +169,43 @@ def add_URI(sp, file: pd.DataFrame, person_id=None):
     # Print this to the console.
     logger.info(
         """---> I'm going to search the Spotify API now for {} tracks""".format(
-            len(tracks)))
+            len(tracks)
+        )
+    )
 
     with alive_bar(len(tracks.index), spinner="dots_recur") as bar:
         # For each artist and track name in the dataframe...
         for i, row in tracks.iterrows():
             try:
-                tracks["trackID"][i] = get_track(tracks["artistName"][i],
-                                                 tracks["trackName"][i])
+                tracks["trackID"][i] = get_track(
+                    tracks["artistName"][i], tracks["trackName"][i]
+                )
             except IndexError:
-                try: # remove apostrophes (most common problem)
-                    tracks["trackID"][i] = get_track(tracks["artistName"][i].replace("'", ""),
-                                                     tracks["trackName"][i].replace("'", ""))
+                try:  # remove apostrophes (most common problem)
+                    tracks["trackID"][i] = get_track(
+                        tracks["artistName"][i].replace("'", ""),
+                        tracks["trackName"][i].replace("'", ""),
+                    )
                 except IndexError:
-                    try: # remove dash and a space (2nd most common problem)
-                        tracks["trackID"][i] = get_track(tracks["artistName"][i].replace("- ", ""),
-                                                         tracks["trackName"][i].replace("- ", ""))
-                    except IndexError: # other punctuation / spelling error, ~1.5% spotify records
+                    try:  # remove dash and a space (2nd most common problem)
+                        tracks["trackID"][i] = get_track(
+                            tracks["artistName"][i].replace("- ", ""),
+                            tracks["trackName"][i].replace("- ", ""),
+                        )
+                    except IndexError:  # other punctuation / spelling error, ~1.5% spotify records
                         tracks["trackID"][i] = "MISSING"
-                        logger.info("---> {} not found.".format((tracks["artistName"][i],
-                                                                 tracks["trackName"][i])))
-            except Exception as e: # other errors
+                        logger.info(
+                            "---> {} not found.".format(
+                                (tracks["artistName"][i], tracks["trackName"][i])
+                            )
+                        )
+            except Exception as e:  # other errors
                 tracks["trackID"][i] = "ERROR", e
-                logger.info("---> {} caused an error {}.".format((tracks["artistName"][i],
-                                                              tracks["trackName"][i]), e))
+                logger.info(
+                    "---> {} caused an error {}.".format(
+                        (tracks["artistName"][i], tracks["trackName"][i]), e
+                    )
+                )
             bar()
 
     # Now we need to match the trackIDs back to the main dataset observations
@@ -212,6 +232,7 @@ def add_URI(sp, file: pd.DataFrame, person_id=None):
 
 
 def add_features_cols(sp, df: pd.DataFrame, person_id=None):
+
     """Gets the track features for all the rows in the df based on trackID column."""
 
     logger.info(
@@ -248,6 +269,7 @@ def add_features_cols(sp, df: pd.DataFrame, person_id=None):
 
     # Turn the features dictionary to a dataframe.
     feature_df = pd.DataFrame.from_records(feature_dict)
+
     # Write the features to the output file.
     if person_id:
         feature_df.to_csv(
@@ -283,6 +305,7 @@ def add_features_cols(sp, df: pd.DataFrame, person_id=None):
 
 
 def run_pipeline(sp, person_id=None):
+
     """Run the re-hydration functions in the correct order."""
 
     if person_id:
