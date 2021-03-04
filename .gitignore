@@ -8,6 +8,7 @@ input/
 output/
 temp/
 *.csv
+*.tsv
 
 # Standard annoying things
 .vscode
