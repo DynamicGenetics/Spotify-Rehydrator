@@ -88,10 +88,14 @@ class Rehydrator:
                 os.path.join(self.output_path, person_id + "_hydrated.tsv"),
                 sep="\t",
                 index=False,
+                na_rep="NA",
             )
         else:  # Otherwise just write it out
             data.to_csv(
-                os.path.join(self.output_path, "hydrated.tsv"), sep="\t", index=False
+                os.path.join(self.output_path, "hydrated.tsv"),
+                sep="\t",
+                index=False,
+                na_rep="NA",
             )
 
 
