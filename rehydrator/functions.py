@@ -112,7 +112,7 @@ class ListeningHistory:
 
     Example
     -------
-        ListeningHistory(input_path, id, sp).run()
+        ListeningHistory(input_path, id, sp).rehydrate()
     """
 
     input_path: str
@@ -143,15 +143,9 @@ class ListeningHistory:
                     # Make the full filepath for rqeading the file.
                     file = os.path.join(self.input_path, file)
 
-                    # For this file, load the json to a dict, and add the ID as a key/value.
+                    # For this file, load the json to a dict.
                     with open(file) as f:
-                        loaded_dict = json.load(f)
-                        # Add person_id as a key/value.
-                        for item in loaded_dict:
-                            item.update({"person_id": self.person_id})
-
-                    # Add this dict to the list
-                    data.extend(loaded_dict)  # Read data frame from json file
+                        data.extend(json.load(f))
 
         else:
             # Read each file
