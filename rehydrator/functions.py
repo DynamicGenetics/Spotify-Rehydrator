@@ -64,10 +64,21 @@ class Rehydrator:
 
         try:
             for person in self._person_ids:
-                data = ListeningHistory(
-                    input_path=self.input_path, person_id=person, sp_auth=self.sp_auth
-                ).rehydrate
-                self.save(data, person_id=person)
+                # Check if the file for this person already exists.
+                if os.path.isfile(
+                    os.path.join(self.output_path, person + "_hydrated.tsv")
+                ):
+                    logger.warn(
+                        "Output file for {} already exists. Skipping.".format(person)
+                    )
+                # If it doesn't then carry on.
+                else:
+                    data = ListeningHistory(
+                        input_path=self.input_path,
+                        person_id=person,
+                        sp_auth=self.sp_auth,
+                    ).rehydrate
+                    self.save(data, person_id=person)
         except AttributeError:  # NoneType error thrown if no unique people
             data = ListeningHistory(
                 input_path=self.input_path, sp_auth=self.sp_auth
