@@ -272,6 +272,22 @@ class Tracks:
                 ).spotifyID
                 bar()
 
+        # Report number of found, missing and errors from track search.
+        try:
+            missing = tracks.trackID.value_counts()["MISSING"]
+        except IndexError:
+            missing = 0
+        try:
+            errors = tracks.trackID.value_counts()["ERROR"]
+        except IndexError:
+            errors = 0
+        found = len(tracks) - missing - errors
+        logger.info(
+            """---> I've searched all the tracks. {} were found. {} are missing. {} threw errors""".format(
+                found, missing, errors
+            )
+        )
+
         return tracks
 
     def get_features(self) -> pd.DataFrame:
@@ -335,7 +351,7 @@ class Track:
 
         if remove_char is not None:
             artist = self.artist.replace(remove_char, "")
-            track = self.artist.replace(remove_char, "")
+            track = self.name.replace(remove_char, "")
         else:
             artist = self.artist
             track = self.name
