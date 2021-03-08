@@ -275,11 +275,11 @@ class Tracks:
         # Report number of found, missing and errors from track search.
         try:
             missing = tracks.trackID.value_counts()["MISSING"]
-        except IndexError:
+        except KeyError:
             missing = 0
         try:
             errors = tracks.trackID.value_counts()["ERROR"]
-        except IndexError:
+        except KeyError:
             errors = 0
         found = len(tracks) - missing - errors
         logger.info(
