@@ -3,10 +3,11 @@ Main module to run the rehydrator from.
 Imports functions from `functions.py` and API keys from `secrets.py`.
 """
 
-import spotipy
 import logging
 import pathlib
 import os
+
+from spotipy.oauth2 import SpotifyClientCredentials
 
 from secrets import CLIENT_ID, CLIENT_SECRET
 from functions import Rehydrator
@@ -21,14 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Spotify Developer Credentials
-auth = spotipy.oauth2.SpotifyClientCredentials(
-    client_id=CLIENT_ID, client_secret=CLIENT_SECRET
-)
-
-# Set up Spotipy access token
-token = auth.get_access_token()
-sp = spotipy.Spotify(auth=token)
-
+auth = SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
 
 if __name__ == "__main__":
 
@@ -37,7 +31,7 @@ if __name__ == "__main__":
     Rehydrator(
         input_path=os.path.join(pathlib.Path(__file__).parent.absolute(), "input"),
         output_path=os.path.join(pathlib.Path(__file__).parent.absolute(), "output"),
-        sp_auth=sp,
+        sp_creds=auth,
     ).run()
 
     logger.info("Rehydration complete.")
