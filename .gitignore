@@ -35,3 +35,12 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Sphinx
+_build
+_templates
+_sources
+_static
+.doctrees
+.buildinfo
+objects.inv
