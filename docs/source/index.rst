@@ -11,38 +11,17 @@ their own data! The idea of a rehydrator was inspired by similar work being done
 
 Before you use the rehyrdator, please make sure to read the Disclaimers to get an understanding of the limitations of the search strategy used. 
 
-Getting Started
-================
-To use the rehydrator you will need two things:
-1. Some data to rehydrate. 
-2. Spotify Developer credentials
-
-Requesting data
----------------
-This package is designed to work with the files named `StreamingHistory.json` that are
-sent to users as part of their data package if they `request their own Spotify data <https://support.spotify.com/us/article/data-rights-and-privacy-settings/>`_. 
-
-This data should be in one or more files with a list of JSON objects that look like this::
-
-    {
-    "endTime" : "2019-01-19 17:01",
-    "artistName" : "An Artist",
-    "trackName" : "A Track Name",
-    "msPlayed" : 19807
-    }
-
-
-Developer credentials
----------------------
-To request developer credentials go to `Spotify's developer portal <https://developer.spotify.com/dashboard/>`_. You will need to 'create an app', which you can
-then request credentials against. This will give you a ``Client ID`` and a ``Client Secret``. 
-
-Using the rehydrator
+User Guide
 =====================
-The *Spotify Rehydrator* primarily operates through the ``Rehydrator`` class. The required inputs for this class are an input folder, an output folder and a `ClientCredentials <>`_ 
+The *Spotify Rehydrator* primarily operates through the ``Rehydrator`` class. The required inputs for this class are an input folder,
+an output folder and a `ClientCredentials <https://spotipy.readthedocs.io/en/2.16.1/#client-credentials-flow>`_ 
 object, which is used by `Spotipy` for authenticating the API calls. You can then call the ``run()`` method.
 
-Assuming you have saved your Client ID and Client Secret as environment variables then this is an example of how you could run the Rehydrator::
+.. note::  To request developer credentials go to `Spotify's developer portal <https://developer.spotify.com/dashboard/>`_.
+            You will need to 'create an app' which have credentials associated with it.
+            Your app dashboard will give you access to your ``Client ID`` and a ``Client Secret``. 
+
+Assuming you have set your Client ID and Client Secret as environment variables then this is an example of how you could run the Rehydrator::
     
     from spotify-rehydrator import Rehydrator
     from spotipy.oauth2 import SpotifyClientCredentials
@@ -58,10 +37,58 @@ Assuming you have saved your Client ID and Client Secret as environment variable
         sp_creds=auth,
     ).run()
 
+Expected formats
+------------------
+
+Streaming History JSON
+^^^^^^^^^^^^^^^^^^^^^^
+This package is designed to work with the files named `StreamingHistory.json` that are
+sent to users as part of their data package if they
+`request their own Spotify data <https://support.spotify.com/us/article/data-rights-and-privacy-settings/>`_. 
+The file will contain up to the past year of the user's listening data.
+
+This data should be in one or more files with a list of JSON objects that look like this::
+
+    {
+    "endTime" : "2019-01-19 17:01",
+    "artistName" : "An Artist",
+    "trackName" : "A Track Name",
+    "msPlayed" : 19807
+    }
+
+
+Input folder
+^^^^^^^^^^^^^
+The input folder should contain a series of Streaming History JSON files. 
+If you have files belonging to multiple individuals then the package expects the
+unique identifier for each person to be the prefix, followed by an underscore. For example::
+
+    # input folder
+    person001_StreamingHistory0.json
+    person001_StreamingHistory1.json
+    person002_StreamingHistory0.json
+
+This would result in two rehydrated files being saved to the output folder::
+
+    # output folder
+    person001-rehydrated.tsv
+    person002-rehydrated.tsv
+
+You could also input several files without any underscores to represent individuals. These
+would all be combined and saved in one output file. 
+
+Useful information
+--------------------
+* If the output directory does not exist then it will be created. 
+* Rehydration for one individual can take 15 minutes or more depending on how many songs there are.
+* If a file for the next individual's data to be rehydrated already exists in the output directory
+    then that person will be skipped. You will need to delete or remove their file from the output
+    folder for the rehydrator to process their data. 
 
 Disclaimers
 ================
-
+* Not all tracks can be retreived from the API. In our experience about 5% of tracks cannot be found on the API. These will have a value of NONE in the output files. 
+* There is not a guaranteed match between the first returned item in a search and the track you want. Comparing msPlayed with the track length is a good way to test this since msPlayed should not exceed the track length. 
 
 Code Documentation
 ===================
