@@ -37,7 +37,7 @@ class Rehydrator:
 
     Example
     -------
-    Rehydrator(input_path, output_path, sp).run()
+        ``Rehydrator(input_path, output_path, sp).run()``
     """
 
     input_path: str
@@ -146,12 +146,12 @@ class ListeningHistory:
     input_path: path to the directory (folder) where the input json files are stored.
     sp_creds: SpotifyClientCredentials object used to generate _sp_auth.
     person_id: The unique identifier that files should be consolidated for.
-    _input_data: private attribute, holding the data read from the json files.
-    _rehydrated_data: holding the fully rehydrated data.
+    _input_data: Private attribute of the data read from the json files.
+    _rehydrated_data: Private attribute of the fully rehydrated data.
 
     Example
     -------
-    ListeningHistory(input_path, id, sp_auth).rehydrate()
+        ``ListeningHistory(input_path, id, sp_auth).rehydrate()``
     """
 
     input_path: str
@@ -259,7 +259,7 @@ class Tracks:
 
     Example
     -------
-    Tracks(data, sp).full_dataset
+        ``Tracks(data, sp).full_dataset``
 
     This will return a pd.Dataframe with feature columns filled for each unique track
     in the original data.
@@ -353,8 +353,8 @@ class Tracks:
     def get_features(self) -> pd.DataFrame:
 
         """Iterate through the trackIDs to get the features for each track.
-        Documentation for this endpoint is here
-        https://developer.spotify.com/documentation/web-api/reference/#endpoint-get-several-audio-features
+        `Documentation for this endpoint is here
+         <https://developer.spotify.com/documentation/web-api/reference/#endpoint-get-several-audio-features>`_
         """
 
         tracks = self.get_track_ids()
@@ -411,7 +411,7 @@ class Track:
 
     Example
     -------
-    Track(name, artist, sp_auth).spotifyID
+        ``Track(name, artist, sp_auth).spotifyID``
     """
 
     name: str
