@@ -14,7 +14,7 @@ How it works
 =============
 #. The files for each person are read to a single dataframe from the `/input` folder.  
 #. The name and artist provided are searched with the Spotify API. The first result is taken to be the track, and the track ID is recorded.   
-#. The trackIDs are then searched on the` `get_audio_features` API endpoint<https://developer.spotify.com/documentation/web-api/reference/#endpoint-get-audio-features-for-several-tracks>`_. 
+#. The trackIDs are then searched on the `get_audio_features` `API endpoint <https://developer.spotify.com/documentation/web-api/reference/#endpoint-get-audio-features-for-several-tracks>`_. 
 #. The matched track ID and audio features are saved as one **tab delimited** `.csv` file per person into the `/output` folder. 
 
 Good to know
