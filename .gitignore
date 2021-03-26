@@ -1,6 +1,5 @@
 # Files
-secrets.py
-rehydrator/secrets.py
+.pypirc
 
 # Inputs/outputs
 *.json
