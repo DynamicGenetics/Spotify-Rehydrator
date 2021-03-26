@@ -22,7 +22,7 @@ setuptools.setup(
     ],
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
-    python_requires=">=3.8",
+    python_requires=">=3.6",
     install_requires=[
         "spotipy >= 2.16",  # https://github.com/plamere/spotipy
         "alive_progress>=1.6",  # https://github.com/rsalmei/alive-progress
