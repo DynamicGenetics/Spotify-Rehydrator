@@ -353,8 +353,8 @@ class Tracks:
     def get_features(self) -> pd.DataFrame:
 
         """Iterate through the trackIDs to get the features for each track.
-        `Documentation for this endpoint is here
-         <https://developer.spotify.com/documentation/web-api/reference/#endpoint-get-several-audio-features>`_
+        `Documentation for this endpoint is
+        here <https://developer.spotify.com/documentation/web-api/reference/#endpoint-get-several-audio-features>`_
         """
 
         tracks = self.get_track_ids()
