@@ -70,23 +70,3 @@ def test_read_cols(path, person_id):
             (["msPlayed", "endTime", "artistName", "trackName"])
         )
 
-
-@pytest.mark.parametrize(
-    "new, existing, rows_out",
-    [
-        (UNMATCHED_NEW_1, UNMATCHED_EXIST_1, 1),
-        (UNMATCHED_NEW_1, UNMATCHED_EXIST_2, None),
-    ],
-)
-def test_unmatched_tracks(new, existing, rows_out):
-    to_match = unmatched_tracks(new_df=new, existing_df=existing)
-
-    try:
-        print(to_match)
-        assert to_match.shape[0] == rows_out
-    except AttributeError as e:  # Raised if df is None
-        if rows_out is None:
-            pass  # If it's supposed to be None then no problem!
-        else:  # Otherwise, raise it.
-            raise e
-
