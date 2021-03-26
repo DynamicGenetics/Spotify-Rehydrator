@@ -4,7 +4,7 @@ with open("README.rst", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="spotify-rehydrator",
+    name="spotifyrehydrator",
     version="0.0.1",
     author="Nina Di Cara",
     author_email="ninadicara@gmail.com",
