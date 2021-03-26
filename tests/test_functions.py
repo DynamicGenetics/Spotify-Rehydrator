@@ -7,7 +7,7 @@ import pytest
 import pathlib
 import os
 
-from rehydrator.functions import get_user_ids, read, unmatched_tracks
+from rehydrator.functions import Track
 
 test_data_path = os.path.join(pathlib.Path(__file__).parent.absolute(), "input")
 

@@ -9,6 +9,14 @@ from alive_progress import alive_bar
 from dataclasses import dataclass, field
 
 # Initialise logger
+
+# Set up logging to print to console
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+
 logger = logging.getLogger(__name__)
 
 
