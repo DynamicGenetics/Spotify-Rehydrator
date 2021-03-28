@@ -138,7 +138,7 @@ class Rehydrator:
 class ListeningHistory:
 
     """
-    Retrieves the full dataset for an set of input files (which can be prefixed by `person_id`).
+    Retrieves the full dataset for a set of input files (which can be prefixed by `person_id`).
     This dataset includes each listening event as a row, with relevant track features attached.
 
     Attributes
@@ -147,7 +147,6 @@ class ListeningHistory:
     sp_creds: SpotifyClientCredentials object used to generate _sp_auth.
     person_id: The unique identifier that files should be consolidated for.
     _input_data: Private attribute of the data read from the json files.
-    _rehydrated_data: Private attribute of the fully rehydrated data.
 
     Example
     -------
@@ -158,7 +157,6 @@ class ListeningHistory:
     sp_creds: oauth2.SpotifyClientCredentials
     person_id: str = None
     _input_data: pd.DataFrame = field(init=False, repr=False)
-    _rehydrated_data: pd.DataFrame = field(init=False, repr=False)
 
     def __post_init__(self):
         # When this class is set up, read the input data to _input_data.
@@ -206,15 +204,7 @@ class ListeningHistory:
 
         return self._from_file
 
-    @property
-    def rehydrate(self):
-
-        "Returns the rehydrated dataframe."
-
-        self._rehydrated_data = self.rehydrate_data()
-        return self._rehydrated_data
-
-    def rehydrate_data(self) -> pd.DataFrame:
+    def rehydrate(self) -> pd.DataFrame:
 
         """Uses the Tracks class to get all of the track IDs and features, then
         joins these on the full listening history data. Returns this complete
@@ -255,7 +245,6 @@ class Tracks:
     names: A dataframe with two columns 'artistName' and 'trackName'.
     sp_creds: SpotifyClientCredentials object used to generate _sp_auth.
     _sp_auth: Spotipy OAuth object for API calls.
-    _full_dataset: private attribute, the rehydrated dataset.
 
     Example
     -------
@@ -399,31 +388,41 @@ class Tracks:
 class Track:
 
     """
-    A class that searches for and returns a spotify ID object for a track, given a trackName and
-    and artistName. This will return the top matched Spotify ID as a string.
+    A class that searches for and returns a spotify ID and other optional information for a track,
+    given a trackName and and artistName.
 
     Attributes
     ----------
     name: The name of the track (str).
     artist: The name of the artist (str).
-    sp_auth: Spotipy OAuth object for API calls.
-    _spotifyID: private attribute, the retrieved track spotify ID.
+    sp_creds: SpotifyClientCredentials object used to generate an auth object.
 
     Example
     -------
-        ``Track(name, artist, sp_auth).spotifyID``
+    .. code-block::
+        heroes = Track(name="Heroes", artist="David Bowie", sp_creds=creds)
+        # Returns dict with just the SpotifyID
+        heroes.get()
+        # Returns dict with all requested information
+        heroes.get(returned_artist=True, returned_track=True, artist_info=True, audio_features=True)
+
     """
 
     name: str
     artist: str
-    sp_auth: oauth2.SpotifyOAuth
-    _spotifyID: str = field(init=False, repr=False)
+    sp_creds: oauth2.SpotifyClientCredentials
 
-    def track_search(self, remove_char=None) -> str:
+    @property
+    def sp_auth(self):
+        return Spotify(auth_manager=self.sp_creds)
 
-        """Get the track ID by searching the Spotify API for the name and title.
+    def search_results(self, remove_char=None) -> dict:
+
+        """Searches the Spotify API for the track and artist and returns the whole
+        results object.
+
         Takes remove_char as a char to remove from the artist and track before
-        searching if needed."""
+        searching if needed - this can improve results."""
 
         if remove_char is not None:
             artist = self.artist.replace(remove_char, "")
@@ -433,39 +432,112 @@ class Track:
             track = self.name
 
         results = self.sp_auth.search(
-            q="artist:" + artist + " track:" + track, type="track", market="GB",
+            q="artist:" + artist + " track:" + track, type="track",
         )
         # Return the first result from this search
-        return results["tracks"]["items"][0]["id"]
+        return results
 
-    def get_spotifyID(self) -> str:
+    def _get_genre_pop(self, artist_urn):
 
-        """Calls track_search() to get the spotifyID, trying to remove apostrophes
-        and dashes if an IndexError is raised. Returns a spotifyID, which is MISSING
-        if it cannot be found, or ERROR if the search has raised an unexpected error."""
+        """API call to retrieve an artist's genres and popularity.
+        Returns a tuple of (genres, popularity)"""
+
+        artist = self.sp_auth.artist(artist_urn)
+
+        genres = artist["genres"]
+        pop = artist["popularity"]
+
+        return genres, pop
+
+    def _extract_results(
+        self,
+        results: dict,
+        returned_artist: bool = False,
+        returned_track: bool = False,
+        artist_info: bool = False,
+        audio_features: bool = False,
+    ):
+
+        """Extract the required data from the results object, based on input arguments."""
+
+        # Initalise object with track info to be returned.
+        track_info = {}
+        track_info["spotifyID"] = results["tracks"]["items"][0]["id"]
+
+        # TODO: Once a matching alg is written, include as a step here.
+
+        if returned_artist is True:
+            # Get the name of the first artist only
+            track_info["returned_artist"] = results["tracks"]["items"][0]["artists"][0][
+                "name"
+            ]
+
+        if returned_track is True:
+            # Get the name of the track
+            track_info["returned_track"] = results["tracks"]["items"][0]["name"]
+
+        if artist_info is True:
+            artist_urn = results["tracks"]["items"][0]["artists"][0]["id"]
+            track_info["artist_genres"], track_info["artist_pop"] = self._get_genre_pop(
+                artist_urn
+            )
+
+        if audio_features is True:
+            track_info["audio_features"] = self.sp_auth.audio_features(
+                track_info["spotifyID"]
+            )[0]
+
+        return track_info
+
+    def get(
+        self,
+        all: bool = False,
+        returned_artist: bool = False,
+        returned_track: bool = False,
+        artist_info: bool = False,
+        audio_features: bool = False,
+    ) -> dict:
+
+        """Calls search_results() to get the spotifyID, trying to remove apostrophes
+        and dashes if an IndexError is raised. Returns a dictionary of objects, with
+        spotifyID and then any other objects as defined in function call.
+
+        Parameters
+        ------------
+        all: bool, default = False
+            Run with all optional data arguments as True
+        returned_artist: bool, default = False
+            Include key of 'returned_artist' with value as exact name of the artist of the returned track.
+        returned_track: bool, default = False
+            Include key of 'returned_track' with value as exact name of the returned track.
+        artist_info: bool, default = False
+            Include keys of 'artist_genres' and 'artist_pop' with list of artist's genres and popularity rating
+            given by the Spotify API.
+        audio_features: bool, default = False
+            Include key of 'audio_features' with value as a dict of the results from the audio_features endpoint.
+        """
 
         try:
-            spotifyID = self.track_search()
+            results = self.search_results()
         except IndexError:
             try:  # remove apostrophes (most common problem)
-                spotifyID = self.track_search(remove_char="'")
+                results = self.search_results(remove_char="'")
 
             except IndexError:
                 try:  # remove dash and a space (2nd most common problem)
-                    spotifyID = self.track_search(remove_char="- ")
+                    results = self.search_results(remove_char="- ")
 
                 except IndexError:  # other punctuation / spelling error, ~1.5% spotify records
-                    spotifyID = "MISSING"
                     logger.info("---> {} not found.".format((self.artist, self.name)))
+                    return {"spotifyID": "MISSING"}
+
         except Exception as e:  # other errors
-            spotifyID = "ERROR"
             logger.info(
                 "---> {} caused an error {}.".format((self.artist, self.name), e)
             )
+            return {"spotifyID": "ERROR"}
 
-        return spotifyID
-
-    @property
-    def spotifyID(self) -> pd.DataFrame:
-        self._spotifyID = self.get_spotifyID()
-        return self._spotifyID
+        # Assuming we successfully got some results, extract requested info and return
+        return self._extract_results(
+            results, returned_artist, returned_track, artist_info, audio_features
+        )
