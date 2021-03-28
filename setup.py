@@ -10,7 +10,7 @@ setuptools.setup(
     author_email="ninadicara@gmail.com",
     description="A convenience package for creating full datasets from self-requested Spotify data.",
     long_description=long_description,
-    long_description_content_type="text/markdown",
+    long_description_content_type="text/x-rst",
     url="https://github.com/DynamicGenetics/Spotify-Rehydrator",
     project_urls={
         "Bug Tracker": "https://github.com/DynamicGenetics/Spotify-Rehydrator/issues",
