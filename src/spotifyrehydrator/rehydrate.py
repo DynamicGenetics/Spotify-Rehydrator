@@ -452,6 +452,7 @@ class Track:
     def _extract_results(
         self,
         results: dict,
+        return_all: bool = False,
         returned_artist: bool = False,
         returned_track: bool = False,
         artist_info: bool = False,
@@ -466,23 +467,23 @@ class Track:
 
         # TODO: Once a matching alg is written, include as a step here.
 
-        if returned_artist is True:
+        if returned_artist is True or return_all is True:
             # Get the name of the first artist only
             track_info["returned_artist"] = results["tracks"]["items"][0]["artists"][0][
                 "name"
             ]
 
-        if returned_track is True:
+        if returned_track is True or return_all is True:
             # Get the name of the track
             track_info["returned_track"] = results["tracks"]["items"][0]["name"]
 
-        if artist_info is True:
+        if artist_info is True or return_all is True:
             artist_urn = results["tracks"]["items"][0]["artists"][0]["id"]
             track_info["artist_genres"], track_info["artist_pop"] = self._get_genre_pop(
                 artist_urn
             )
 
-        if audio_features is True:
+        if audio_features is True or return_all is True:
             track_info["audio_features"] = self.sp_auth.audio_features(
                 track_info["spotifyID"]
             )[0]
@@ -491,7 +492,7 @@ class Track:
 
     def get(
         self,
-        all: bool = False,
+        return_all: bool = False,
         returned_artist: bool = False,
         returned_track: bool = False,
         artist_info: bool = False,
@@ -539,5 +540,11 @@ class Track:
 
         # Assuming we successfully got some results, extract requested info and return
         return self._extract_results(
-            results, returned_artist, returned_track, artist_info, audio_features
+            results,
+            return_all,
+            returned_artist,
+            returned_track,
+            artist_info,
+            audio_features,
         )
+
