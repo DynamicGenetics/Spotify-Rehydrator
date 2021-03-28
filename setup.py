@@ -8,7 +8,7 @@ setuptools.setup(
     version="0.0.1",
     author="Nina Di Cara",
     author_email="ninadicara@gmail.com",
-    description="A convenience package for creating full datasets from self-requested Spotify data.",
+    description="A convenience package for creating datasets of track features from self-requested Spotify data.",
     long_description=long_description,
     long_description_content_type="text/x-rst",
     url="https://github.com/DynamicGenetics/Spotify-Rehydrator",
