@@ -1,3 +1,23 @@
+"""
+Main module for the `spotifyrehydrator` package, containing four dataclasses.
+
+`Track` operates on a single Track instance, starting from just a `name` and an `artist`,
+as would be provided in self-requested data. It is possible to use `Track` to get information
+about a single Track.
+
+`Tracks` contains similar logic as for `Track`, but makes use of the batch endpoints to save on
+API calls. Therefore, its more efficient than `Track` for many calls, and works primarily with
+Pandas dataframe objects, rather than delivering dictionaries.
+
+`ListeningHistory` encapsulates the data and logic for a single user's listening history, which
+includes managing the additional metadata such as datetimes
+and repetitions. Before `Tracks` is called to build a dataset the history will be reduced the
+set of unique tracks, and then matched back to the meta data for each listening event.
+
+`Rehydrator` is mainly intended to rebuild multiple datasets in instances
+when you have many listening histories from multiple different users. The Rehydrator is the
+only class which will write files.
+"""
 import os
 import logging
 import pandas as pd
