@@ -21,7 +21,6 @@ Good to know
 ===============
 * Not all tracks can be retreived from the API. In our experience about 5% of tracks cannot be found on the API. These will have a value of NONE in the output files. 
 * There is not a guaranteed match between the first returned item in a search and the track you want. Comparing msPlayed with the track length is a good way to test this since msPlayed should not exceed the track length. 
-* This programme is optimised for British users. If you are running it elsewhere you may want to try changing the 'market' argument in the function `get_URIs` in `functions.py`. More information about this is `available in Spotify's documentation <https://developer.spotify.com/documentation/web-api/reference/#endpoint-search>`_. 
 
 
 P.S. Thanks to `Pixel perfect <https://www.flaticon.com/authors/pixel-perfect>`_ for the title `icon <https://www.flaticon.com/>`_. 🙂 
