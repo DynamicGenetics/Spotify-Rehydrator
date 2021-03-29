@@ -1,23 +1,19 @@
 """
-Main module for the `spotifyrehydrator` package, containing four dataclasses.
+Main module for the `spotifyrehydrator` package, containing three dataclasses.
 
 `Track` operates on a single Track instance, starting from just a `name` and an `artist`,
 as would be provided in self-requested data. It is possible to use `Track` to get information
 about a single Track.
 
 `Tracks` contains similar logic as for `Track`, but makes use of the batch endpoints to save on
-API calls. Therefore, its more efficient than `Track` for many calls, and works primarily with
-Pandas dataframe objects, rather than delivering dictionaries.
-
-`ListeningHistory` encapsulates the data and logic for a single user's listening history, which
-includes managing the additional metadata such as datetimes
-and repetitions. Before `Tracks` is called to build a dataset the history will be reduced the
-set of unique tracks, and then matched back to the meta data for each listening event.
+API calls. Therefore, its more efficient than `Track` for many calls, and I/O is primarily
+Pandas DataFrame objects, rather than dictionaries.
 
 `Rehydrator` is mainly intended to rebuild multiple datasets in instances
-when you have many listening histories from multiple different users. The Rehydrator is the
-only class which will write files.
+when you have many listening histories from multiple different users with additional metadata
+such as datetimes. The Rehydrator is the only class which will write files.
 """
+
 import os
 import logging
 import pandas as pd
@@ -27,8 +23,6 @@ from spotipy import oauth2, Spotify
 from spotipy.exceptions import SpotifyException
 from alive_progress import alive_bar
 from dataclasses import dataclass, field
-
-# Initialise logger
 
 # Set up logging to print to console
 logging.basicConfig(
@@ -52,8 +46,9 @@ class Rehydrator:
     ----------
     input_path: path to the directory (folder) where the input json files are stored.
     output_path: path to the directory (folder) where the output .tsv files are saved.
-    sp_creds: SpotifyClientCredentials object used to generate _sp_auth.
-    _person_ids: Private attribute of each of the unique 'people' files identified for.
+    client_id: Spotify API client ID Credentials
+    client_secret: Spotify API client secret Credentials
+    _person_ids: A list of each of the unique 'people' files identified for, or None.
 
     Example
     -------
@@ -62,14 +57,15 @@ class Rehydrator:
 
     input_path: str
     output_path: str
-    sp_creds: oauth2.SpotifyClientCredentials
+    client_id: str
+    client_secret: str
     _person_ids: list = field(init=False, repr=False)
 
     def __post_init__(self):
         # When this class is set up get the list of person_ids.
-        self._person_ids = self.person_ids()
+        self._person_ids = self._person_ids()
 
-    def person_ids(self):
+    def _person_ids(self):
 
         """Get a list of all the participant ids in the input folder.
         Return if None if there are no ids."""
@@ -83,111 +79,25 @@ class Rehydrator:
             if file.endswith(".json"):
                 # Get the unique user ID
                 name_split = file.split(sep="_")
-                # If it has split into 2 parts
+                # If it has split into 2 parts, take the first part
                 if len(name_split) > 1:
                     ids.add(file.split(sep="_")[0])
                 # If there are no files with ids then pass
                 else:
                     pass
-                    # ~ should this be "can't find anyone, exiting?"
 
         if ids:
             return list(ids)
         else:
             return None
 
-    def run(self):
+    def _read_data(self, person_id: str = None) -> pd.DataFrame:
 
-        """Function to run the rehydrator for each 'person' identified."""
-
-        try:
-            for person in self._person_ids:
-                # Check if the file for this person already exists.
-                if os.path.isfile(
-                    os.path.join(self.output_path, person + "_hydrated.tsv")
-                ):
-                    logger.warn(
-                        "Output file for {} already exists. Skipping.".format(person)
-                    )
-                # If it doesn't then carry on.
-                else:
-                    data = ListeningHistory(
-                        input_path=self.input_path,
-                        person_id=person,
-                        sp_creds=self.sp_creds,
-                    ).rehydrate
-                    self.save(data, person_id=person)
-        except AttributeError:  # NoneType error thrown if no unique people
-            data = ListeningHistory(
-                input_path=self.input_path, sp_creds=self.sp_creds
-            ).rehydrate
-            self.save(data)
-
-    def save(self, data, person_id=None):
-
-        """Function to save the rehydrated data out to .tsv. person_id is optional for file naming."""
-
-        # Create an output folder if it doesn't already exist
-        if not os.path.exists(self.output_path):
-            os.mkdir(self.output_path)
-
-        # If the person_id is not None then write out with the id
-        if person_id is not None:
-            data.to_csv(
-                os.path.join(self.output_path, person_id + "_hydrated.tsv"),
-                sep="\t",
-                index=False,
-                na_rep="NA",
-            )
-        else:  # Otherwise just write it out
-            data.to_csv(
-                os.path.join(self.output_path, "hydrated.tsv"),
-                sep="\t",
-                index=False,
-                na_rep="NA",
-            )
-
-        logger.info(
-            "---> Rehydrated data for {} has been saved to the output folder".format(
-                person_id
-            )
-        )
-
-
-@dataclass
-class ListeningHistory:
-
-    """
-    Retrieves the full dataset for a set of input files (which can be prefixed by `person_id`).
-    This dataset includes each listening event as a row, with relevant track features attached.
-
-    Attributes
-    ----------
-    input_path: path to the directory (folder) where the input json files are stored.
-    sp_creds: SpotifyClientCredentials object used to generate _sp_auth.
-    person_id: The unique identifier that files should be consolidated for.
-    _input_data: Private attribute of the data read from the json files.
-
-    Example
-    -------
-        ``ListeningHistory(input_path, id, sp_auth).rehydrate()``
-    """
-
-    input_path: str
-    sp_creds: oauth2.SpotifyClientCredentials
-    person_id: str = None
-    _input_data: pd.DataFrame = field(init=False, repr=False)
-
-    def __post_init__(self):
-        # When this class is set up, read the input data to _input_data.
-        # Also generate a Spotify OAuth object to start with.
-        self._input_data = self.input_data()
-
-    def input_data(self) -> pd.DataFrame:
-
-        """Read in the .json files from input folder. If person_id is passed, it will only read
+        """
+        Read in the .json files from input folder. If person_id is passed, it will only read
         files that start with the person_id. Returns a dataframe of file content with an
-        additional column for person_id if included."""
+        additional column for person_id if included.
+        """
 
         data = []  # an empty list to store the json files
 
@@ -220,37 +130,110 @@ class ListeningHistory:
 
         logger.info("---> I've read all the files for {}".format(self.person_id))
 
-        self._from_file = pd.DataFrame.from_records(data)
+        return pd.DataFrame.from_records(data)
 
-        return self._from_file
+    def rehydrate(
+        self,
+        person_id: str = None,
+        return_all: bool = False,
+        audio_features: bool = False,
+        artist_info: bool = False,
+    ) -> None:
 
-    def rehydrate(self) -> pd.DataFrame:
-
-        """Uses the Tracks class to get all of the track IDs and features, then
-        joins these on the full listening history data. Returns this complete
-        dataset.
-
-        Returns
-        -------
-        pd.DataFrame
-            A dataframe with all track features for each listening event.
         """
+        For a single person's set of data, use the Tracks class to get all of
+        the track IDs and features, then join these on the full listening 
+        history data. Save out the complete data.
+
+        Parameters
+        -----------
+        person_id: str = None
+        return_all: bool = False
+        audio_features: bool = False
+        artist_info: bool = False
+        """
+
+        # Read the input data
+        input_data = self._read_data(person_id=person_id)
 
         if self.person_id is not None:
             logging.info("---> Rehydrating {}".format(self.person_id))
 
+        # Get the data for the individual tracks
         track_data = Tracks(
-            names=self._input_data[["artistName", "trackName"]], sp_creds=self.sp_creds
-        ).full_dataset
+            names=input_data[["artistName", "trackName"]],
+            client_id=self.client_id,
+            client_secret=self.client_secret,
+        ).get(return_all, audio_features, artist_info)
 
+        # Merge the Tracks data with the listening history metadata
         rehydrated_data = pd.merge(
-            self._input_data, track_data, how="left", on=["artistName", "trackName"]
+            input_data, track_data, how="left", on=["artistName", "trackName"]
         )
 
+        # Set a column as the personID
         if self.person_id is not None:
             rehydrated_data["personID"] = self.person_id
 
-        return rehydrated_data
+        # Save out the rehydrated data
+        self._save(rehydrated_data, person_id=person)
+
+    def run(
+        self,
+        return_all: bool = False,
+        audio_features: bool = False,
+        artist_info: bool = False,
+    ) -> None:
+
+        """Function to run the rehydrator for each 'person' identified."""
+
+        try:
+            for person in self._person_ids:
+                # Check if the file for this person already exists.
+                if os.path.isfile(
+                    os.path.join(self.output_path, person + "_hydrated.tsv")
+                ):
+                    logger.warn(
+                        "Output file for {} already exists. Skipping.".format(person)
+                    )
+                # If it doesn't then carry on.
+                else:
+                    self.rehydrate(person, return_all, audio_features, artist_info)
+        except AttributeError:  # NoneType error thrown if no unique people
+            logging.info(
+                "---> No unique identifiers found. Rehydrating all files together."
+            )
+            self.rehydrate(None, return_all, audio_features, artist_info)
+
+    def _save(self, data: pd.DataFrame, person_id: str = None):
+
+        """Function to save the rehydrated data out to .tsv. person_id is optional for file naming."""
+
+        # Create an output folder if it doesn't already exist
+        if not os.path.exists(self.output_path):
+            os.mkdir(self.output_path)
+
+        # If the person_id is not None then write out with the id
+        if person_id is not None:
+            data.to_csv(
+                os.path.join(self.output_path, person_id + "_hydrated.tsv"),
+                sep="\t",
+                index=False,
+                na_rep="NA",
+            )
+        else:  # Otherwise just write it out
+            data.to_csv(
+                os.path.join(self.output_path, "hydrated.tsv"),
+                sep="\t",
+                index=False,
+                na_rep="NA",
+            )
+
+        logger.info(
+            "---> Rehydrated data for {} has been saved to the output folder".format(
+                person_id
+            )
+        )
 
 
 @dataclass
@@ -258,55 +241,57 @@ class Tracks:
 
     """
     A class that takes a dataframe of listening events with artistName and trackName,
-    and retrieves the trackID and audio features of each track.
+    and returns these with the trackID and audio features of each track as a dataframe.
 
     Attributes
     ----------
-    names: A dataframe with two columns 'artistName' and 'trackName'.
-    sp_creds: SpotifyClientCredentials object used to generate _sp_auth.
+    data: A dataframe with two columns 'artistName' and 'trackName'.
+    client_id: Spotify API client ID Credentials
+    client_secret: Spotify API client secret Credentials
     _sp_auth: Spotipy OAuth object for API calls.
 
     Example
     -------
-        ``Tracks(data, sp).full_dataset``
+        ``Tracks(data, client_id, client_secret).get(return_all=True)``
 
     This will return a pd.Dataframe with feature columns filled for each unique track
     in the original data.
     """
 
-    names: pd.DataFrame
-    sp_creds: oauth2.SpotifyClientCredentials
+    data: pd.DataFrame
+    client_id: str
+    client_secret: str
     _sp_auth: oauth2.SpotifyOAuth = field(init=False, repr=False)
-    _full_dataset: pd.DataFrame = field(init=False, repr=False)
 
     def __post_init__(self):
         # Set the track information to make sure it contains the right cols and has no duplicates
-        self.names = self.names[["artistName", "trackName"]].drop_duplicates()
+        try:
+            self.data = self.data[["artistName", "trackName"]].drop_duplicates()
+            self.data.reset_index(drop=True, inplace=True)
+        except KeyError:
+            raise KeyError(
+                "Input data does not contain the required columns 'artistName' and 'trackName'."
+            )
         # Set the initial Spotify authentication obejct
-        self.set_sp()
+        self._set_sp()
 
-    @property
-    def full_dataset(self):
-
-        """Runs the function required to acquire the full dataset and
-        the return it."""
-
-        self._full_dataset = self.get_features()
-        return self._full_dataset
-
-    def set_sp(self):
+    def _set_sp(self):
 
         """Set up the Spotify API authentication object.
         This can also be used to refresh if it expires."""
 
         logger.info("---> I've (re)set the Spotify API authenticator")
-        self._sp_auth = Spotify(auth_manager=self.sp_creds)
+        sp_creds = oauth2.SpotifyClientCredentials(
+            client_id=self.client_id, client_secret=self.client_secret
+        )
+        self._sp_auth = Spotify(auth_manager=sp_creds)
 
-    def get_track_ids(self) -> pd.DataFrame:
+    def _get_track_info(self) -> pd.DataFrame:
 
-        """Iterate through the tracks provided in `names` and get the trackID for each of them."""
+        """Iterate through the tracks provided in `data` and get basic search info for each of them."""
 
-        tracks = self.names
+        # Make a list of dictionaries, one for each track.
+        tracks = self.data.to_dict("index")
 
         # Print this to the console.
         logger.info(
@@ -315,31 +300,41 @@ class Tracks:
             )
         )
 
-        # Add a new empty row for the trackID
-        tracks["trackID"] = ""
+        # Init empty listc
+        track_list = []
 
-        with alive_bar(len(tracks.index), spinner="dots_recur") as bar:
+        with alive_bar(len(tracks), spinner="dots_recur") as bar:
             # For each artist and track name in the dataframe...
-            for i, row in tracks.iterrows():
+            for index, track in tracks.items():
                 try:
-                    tracks["trackID"][i] = Track(
-                        artist=tracks["artistName"][i],
-                        name=tracks["trackName"][i],
-                        sp_auth=self._sp_auth,
-                    ).spotifyID
-                    bar()  # Progress bar
+                    track_info = Track(
+                        artist=track["artistName"],
+                        name=track["trackName"],
+                        client_id=self.client_id,
+                        client_secret=self.client_secret,
+                    ).get()
+
                 except SpotifyException:
                     # This should be raised if token expires
                     # Reset the authentication object
-                    self.set_sp()
-                    # Try again
-                    tracks["trackID"][i] = Track(
-                        artist=tracks["artistName"][i],
-                        name=tracks["trackName"][i],
-                        sp_auth=self._sp_auth,
-                    ).spotifyID
-                    bar()  # Progress bar
+                    self._set_sp()
                     logger.info("Spotify Token Reset")
+                    # Try again
+                    track_info = Track(
+                        artist=track["artistName"],
+                        name=track["trackName"],
+                        client_id=self.client_id,
+                        client_secret=self.client_secret,
+                    ).get()
+
+                # Update the dict in the original list with the new info
+                track.update(track_info)
+                track_list.append(track)
+                # Iterate the progress bar
+                bar()
+
+        # Convert the dicts to a dataframe when finished.
+        tracks = pd.DataFrame.from_records(track_list)
 
         # Report number of found, missing and errors from track search.
         try:
@@ -359,47 +354,111 @@ class Tracks:
 
         return tracks
 
-    def get_features(self) -> pd.DataFrame:
+    def _get_audio_features(self, track_ids: list) -> pd.DataFrame:
 
-        """Iterate through the trackIDs to get the features for each track.
+        """
+        Given a list of spotifyIDs, get the features for them all in batches of 100.
         `Documentation for this endpoint is
         here <https://developer.spotify.com/documentation/web-api/reference/#endpoint-get-several-audio-features>`_
         """
 
-        tracks = self.get_track_ids()
+        feature_dicts = []
 
-        # Make a list of IDs without any trackIDs that were missing or errors
-        to_find = tracks[~tracks["trackID"].isin(["MISSING", "ERROR"])]
-        to_find = tracks["trackID"].to_list()
-
-        feature_dict = []
-
-        for i in range(0, len(to_find), 100):
+        for i in range(0, len(track_ids), 100):
 
             try:
-                features = self._sp_auth.audio_features(to_find[i : i + 100])
+                features = self._sp_auth.audio_features(track_ids[i : i + 100])
             except SpotifyException:
                 # This should be raised if token expires
-                self.set_sp()  # Reset the authentication object
+                self._set_sp()  # Reset the authentication object
                 # Try again
-                features = self._sp_auth.audio_features(to_find[i : i + 100])
+                features = self._sp_auth.audio_features(track_ids[i : i + 100])
                 logger.info("Spotify Token Reset")
 
             for feature_set in features:
                 if feature_set:  # If is is not empty
-                    feature_dict.append(
+                    feature_dicts.append(
                         feature_set
                     )  # ...append features to the the list.
 
-        # Turn the features set of dicts into a dataframe
-        features = pd.DataFrame.from_records(feature_dict)
+        # Return the features as a dataframe
+        return pd.DataFrame.from_records(feature_dicts)
 
-        # Merge again so we have all of the tracks (including missing ones we deleted earlier.)
-        tracks = pd.merge(
-            tracks, features, how="left", left_on="trackID", right_on="id"
+    def _get_artist_info(self, artist_ids: list) -> pd.DataFrame:
+
+        artist_dicts = []
+
+        for i in range(0, len(artist_ids), 50):
+
+            try:
+                artists = self._sp_auth.artists(artist_ids[i : i + 50])
+
+            except SpotifyException:
+                # This should be raised if token expires
+                self._set_sp()  # Reset the authentication object
+                logger.info("Spotify Token Reset")
+                # Try again
+                artists = self._sp_auth.artists(artist_ids[i : i + 50])
+
+            for artist in artists["artists"]:
+                if artist:  # If is is not empty
+                    # Add relevant items to the list.
+                    artist_dicts.append(
+                        dict((k, artist[k]) for k in ("id", "genres", "popularity"))
+                    )
+
+        # Return the features as a dataframe
+        return pd.DataFrame.from_records(artist_dicts)
+
+    def get(
+        self,
+        return_all: bool = False,
+        audio_features: bool = False,
+        artist_info: bool = False,
+    ) -> pd.DataFrame:
+
+        """
+        Get the requested data for each track. Returns a dataframe of unique tracks. 
+
+        Parameters
+        ------------
+        return_all: bool, default = False
+            Run with all optional data arguments as True
+        artist_info: bool, default = False
+            Include keys of 'artist_genres' and 'artist_pop' with list of artist's genres and popularity rating
+            given by the Spotify API artist end point.
+        audio_features: bool, default = False
+            Include key of 'audio_features' with value as a dict of the results from the audio_features endpoint.
+        """
+
+        # Get the basic track information
+        tracks = self._get_track_info()
+
+        if audio_features or return_all is True:
+            # Make a list of IDs without any trackIDs that were missing or errors.
+            to_find = tracks[~tracks["trackID"].isin(["MISSING", "ERROR"])]
+            to_find = to_find["trackID"].tolist()
+            features = self._get_audio_features(track_ids=to_find)
+
+            # Merge again so we have all of the tracks (including missing ones we filtered out earlier).
+            tracks = pd.merge(
+                tracks, features, how="left", left_on="trackID", right_on="id"
+            )
+
+        if artist_info or return_all is True:
+            # Make a list of artist IDs.
+            artists = tracks["artistID"].unique()
+            artist_info = self._get_artist_info(artist_ids=artists.tolist())
+
+            # Merge into the main tracks dataset.
+            tracks = pd.merge(
+                tracks, artist_info, how="left", left_on="artistID", right_on="id"
+            )
+
+        # Drop left over / repeated columns
+        tracks.drop(
+            columns=["uri", "track_href", "analysis_url", "id_x", "id_y"], inplace=True
         )
-
-        tracks.drop(columns=["id", "uri", "track_href", "analysis_url"], inplace=True)
 
         return tracks
 
@@ -415,8 +474,8 @@ class Track:
     ----------
     name: The name of the track (str).
     artist: The name of the artist (str).
-    sp_creds: SpotifyClientCredentials object used to generate an auth object.
-
+    client_id: Spotify API client ID Credentials
+    client_secret: Spotify API client secret Credentials
     Example
     -------
     .. code-block::
@@ -424,25 +483,31 @@ class Track:
         # Returns dict with just the SpotifyID
         heroes.get()
         # Returns dict with all requested information
-        heroes.get(returned_artist=True, returned_track=True, artist_info=True, audio_features=True)
+        heroes.get(return_all=True)
 
     """
 
     name: str
     artist: str
-    sp_creds: oauth2.SpotifyClientCredentials
+    client_id: str
+    client_secret: str
 
     @property
     def sp_auth(self):
-        return Spotify(auth_manager=self.sp_creds)
+        sp_creds = oauth2.SpotifyClientCredentials(
+            client_id=self.client_id, client_secret=self.client_secret
+        )
+        return Spotify(auth_manager=sp_creds)
 
     def search_results(self, remove_char=None) -> dict:
 
-        """Searches the Spotify API for the track and artist and returns the whole
+        """
+        Searches the Spotify API for the track and artist and returns the whole
         results object.
 
         Takes remove_char as a char to remove from the artist and track before
-        searching if needed - this can improve results."""
+        searching if needed - this can improve results.
+        """
 
         if remove_char is not None:
             artist = self.artist.replace(remove_char, "")
@@ -457,12 +522,12 @@ class Track:
         # Return the first result from this search
         return results
 
-    def _get_genre_pop(self, artist_urn):
+    def _get_artist_info(self, artist_id):
 
         """API call to retrieve an artist's genres and popularity.
         Returns a tuple of (genres, popularity)"""
 
-        artist = self.sp_auth.artist(artist_urn)
+        artist = self.sp_auth.artist(artist_id)
 
         genres = artist["genres"]
         pop = artist["popularity"]
@@ -473,8 +538,6 @@ class Track:
         self,
         results: dict,
         return_all: bool = False,
-        returned_artist: bool = False,
-        returned_track: bool = False,
         artist_info: bool = False,
         audio_features: bool = False,
     ):
@@ -483,30 +546,45 @@ class Track:
 
         # Initalise object with track info to be returned.
         track_info = {}
-        track_info["spotifyID"] = results["tracks"]["items"][0]["id"]
+        track_info["trackID"] = results["tracks"]["items"][0]["id"]
 
         # TODO: Once a matching alg is written, include as a step here.
 
-        if returned_artist is True or return_all is True:
-            # Get the name of the first artist only
+        # Get the name of the first artist only, save this and their unique ID
+        try:
             track_info["returned_artist"] = results["tracks"]["items"][0]["artists"][0][
                 "name"
             ]
+            track_info["artistID"] = results["tracks"]["items"][0]["artists"][0]["id"]
+        except IndexError:
+            # If these haven't been returned then set as NA
+            track_info["returned_artist"], track_info["artistID"] = "NA", "NA"
 
-        if returned_track is True or return_all is True:
-            # Get the name of the track
+        # Get the name of the track
+        try:
             track_info["returned_track"] = results["tracks"]["items"][0]["name"]
+        except IndexError:
+            track_info["returned_track"] = "NA"
 
         if artist_info is True or return_all is True:
-            artist_urn = results["tracks"]["items"][0]["artists"][0]["id"]
-            track_info["artist_genres"], track_info["artist_pop"] = self._get_genre_pop(
-                artist_urn
-            )
+            # Get the artist's genres and popularity (requires extra API call)
+            try:
+                artist_id = results["tracks"]["items"][0]["artists"][0]["id"]
+                (
+                    track_info["artist_genres"],
+                    track_info["artist_pop"],
+                ) = self._get_artist_info(artist_id)
+            except IndexError:
+                track_info["artist_genres"], track_info["artist_pop"] = "NA", "NA"
 
         if audio_features is True or return_all is True:
-            track_info["audio_features"] = self.sp_auth.audio_features(
-                track_info["spotifyID"]
-            )[0]
+            # Get the track's audio features (requires extra API call)
+            try:
+                track_info["audio_features"] = self.sp_auth.audio_features(
+                    track_info["trackID"]
+                )[0]
+            except IndexError:
+                track_info["audio_features"] = "NA"
 
         return track_info
 
@@ -525,15 +603,11 @@ class Track:
 
         Parameters
         ------------
-        all: bool, default = False
+        return_all: bool, default = False
             Run with all optional data arguments as True
-        returned_artist: bool, default = False
-            Include key of 'returned_artist' with value as exact name of the artist of the returned track.
-        returned_track: bool, default = False
-            Include key of 'returned_track' with value as exact name of the returned track.
         artist_info: bool, default = False
             Include keys of 'artist_genres' and 'artist_pop' with list of artist's genres and popularity rating
-            given by the Spotify API.
+            given by the Spotify API artist end point.
         audio_features: bool, default = False
             Include key of 'audio_features' with value as a dict of the results from the audio_features endpoint.
         """
@@ -550,21 +624,14 @@ class Track:
 
                 except IndexError:  # other punctuation / spelling error, ~1.5% spotify records
                     logger.info("---> {} not found.".format((self.artist, self.name)))
-                    return {"spotifyID": "MISSING"}
+                    return {"trackID": "MISSING"}
 
         except Exception as e:  # other errors
             logger.info(
                 "---> {} caused an error {}.".format((self.artist, self.name), e)
             )
-            return {"spotifyID": "ERROR"}
+            return {"trackID": "ERROR"}
 
         # Assuming we successfully got some results, extract requested info and return
-        return self._extract_results(
-            results,
-            return_all,
-            returned_artist,
-            returned_track,
-            artist_info,
-            audio_features,
-        )
+        return self._extract_results(results, return_all, artist_info, audio_features,)
 
