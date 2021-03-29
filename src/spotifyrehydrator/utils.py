@@ -129,7 +129,8 @@ class Rehydrator:
                     # Add this dict to the list
                     data.extend(loaded_dict)  # Read data frame from json file
 
-        logger.info("---> I've read all the files for {}".format(person_id))
+        if person_id is not None:
+            logger.info("---> I've read all the files for {}".format(person_id))
 
         return pd.DataFrame.from_records(data)
 
@@ -154,11 +155,11 @@ class Rehydrator:
         artist_info: bool = False
         """
 
-        # Read the input data
-        input_data = self._read_data(person_id=person_id)
-
         if person_id is not None:
             logging.info("---> Rehydrating {}".format(person_id))
+
+        # Read the input data
+        input_data = self._read_data(person_id=person_id)
 
         # Get the data for the individual tracks
         track_data = Tracks(
@@ -188,7 +189,20 @@ class Rehydrator:
         artist_info: bool = False,
     ) -> None:
 
-        """Function to run the rehydrator for each 'person' identified."""
+        """
+        Iterate through each person's set of data by calling the 'rehydrate' method on each.
+
+        Parameters
+        -----------
+        return_all: bool = False
+            Return both audio_features and artist_info
+        audio_features: bool = False
+            Return each track's audio features. 
+            `Spotify documentation available here. <https://developer.spotify.com/documentation/web-api/reference/#object-audiofeaturesobject>`_
+        artist_info: bool = False
+            Return the popularity and genre list for each track's artist. 
+            `Spotify documentation available here. <https://developer.spotify.com/documentation/web-api/reference/#object-artistobject>`_
+        """
 
         try:
             for person in self._person_ids:
@@ -203,10 +217,10 @@ class Rehydrator:
                 else:
                     self.rehydrate(person, return_all, audio_features, artist_info)
         except TypeError:  # NoneType error thrown if no unique people
-            logging.info(
+            logging.warn(
                 "---> No unique identifiers found. Rehydrating all files together."
             )
-            self.rehydrate(None, return_all, audio_features, artist_info)
+            self.rehydrate(return_all=return_all, audio_features=audio_features, artist_info=artist_info)
 
     def _save(self, data: pd.DataFrame, person_id: str = None):
 
@@ -233,7 +247,7 @@ class Rehydrator:
             )
 
         logger.info(
-            "---> Rehydrated data for {} has been saved to the output folder".format(
+            "---> Rehydrated data has been saved to the output folder".format(
                 person_id
             )
         )

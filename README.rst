@@ -10,12 +10,33 @@
 Recreate a full dataset of audio features of songs downloaded through Spotify's 'download my data' facility.  
 This requires the files named `StreamingHistory{n}.json` where {n} represents the file number that starts at 0, and goes up to however many files were retrieved.   
 
+Quick start
+==============
+Extended documentation is available on ReadTheDocs. An example of using the package to rehydrate a folder of json files is::
+  
+  # main.py
+  from spotifyrehydrator import Rehydrator
+  import os
+  import pathlib
+
+  if __name__ == "__main__":
+      Rehydrator(
+          os.path.join(pathlib.Path(__file__).parent.absolute(), "input"),
+          os.path.join(pathlib.Path(__file__).parent.absolute(), "output"),
+          client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+          client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
+      ).run(return_all=True)
+
+
+Run takes boolean arguments for `audio_features`, `artist info` or `return_all` which returns both. These will determine how much information is retrieved to make up
+the full dataset that is saved into the output folder. 
+
 How it works
 =============
-#. The files for each person are read to a single dataframe from the `/input` folder.  
+#. The files for each person are read from the specified input folder.  
 #. The name and artist provided are searched with the Spotify API. The first result is taken to be the track, and the track ID is recorded.   
-#. The trackIDs are then searched on the `get_audio_features` `API endpoint <https://developer.spotify.com/documentation/web-api/reference/#endpoint-get-audio-features-for-several-tracks>`_. 
-#. The matched track ID and audio features are saved as one **tab delimited** `.csv` file per person into the `/output` folder. 
+#. Additional information is searched on other endpoints if `audio_features`, `artist info` or `return_all` were set to `True`.
+#. The matched track ID and audio features are saved as one **tab delimited** `.tsv` file per person into the specified output folder. 
 
 Good to know
 ===============
