@@ -5,7 +5,7 @@ with open("README.rst", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="spotifyrehydrator",
-    version="0.0.1",
+    version="0.1.0",
     author="Nina Di Cara",
     author_email="ninadicara@gmail.com",
     description="A convenience package for creating datasets of track features from self-requested Spotify data.",
