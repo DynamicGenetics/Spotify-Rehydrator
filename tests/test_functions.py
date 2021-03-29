@@ -6,13 +6,17 @@ import pytest
 import spotipy
 import pathlib
 import os
+import simplejson as json
+import pandas as pd
 
-from src.spotifyrehydrator.rehydrate import Track
+from src.spotifyrehydrator.rehydrate import Track, Tracks
 
 creds = spotipy.oauth2.SpotifyClientCredentials(
     client_id=os.getenv("SPOTIFY_CLIENT_ID"),
     client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
 )
+
+test_data = os.path.join(pathlib.Path(__file__).parent.absolute(), "input")
 
 
 class TestTrack:
@@ -36,11 +40,28 @@ class TestTrack:
     def test_track_get(self):
         track_info = self.test_track.get()
         assert isinstance(track_info, dict)
-        assert isinstance(track_info["spotifyID"], str)
+        assert isinstance(track_info["trackID"], str)
 
 
-# test_data_path = os.path.join(pathlib.Path(__file__).parent.absolute(), "input")
+class TestTracks:
+    def setup_method(self):
+        with open(os.path.join(test_data, "Person002_StreamingHistory.json")) as f:
+            data = json.load(f)
+        data = pd.DataFrame.from_records(data)
+        self.tracks = Tracks(data, sp_creds=creds)
 
+    def test_incorrect_input_columns(self):
+        """Try to give Tracks obj a df with incorrect columns."""
+        df = pd.DataFrame({"col1": [2, 1, 9, 8, 7, 4], "col2": [0, 1, 9, 4, 2, 3],})
+        with pytest.raises(KeyError):
+            tracks = Tracks(df, sp_creds=creds)
+
+    def test_get(self):
+        data = self.tracks.get(return_all=True)
+        assert data.shape[1] == 22
+
+
+# class TestRehydrator:
 
 # @pytest.mark.parametrize(
 #     "input,expected",
