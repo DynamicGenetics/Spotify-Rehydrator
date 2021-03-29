@@ -7,12 +7,15 @@
    :target: http://perso.crans.org/besson/LICENSE.html
 
 
-Recreate a full dataset of audio features of songs downloaded through Spotify's 'download my data' facility.  
-This requires the files named `StreamingHistory{n}.json` where {n} represents the file number that starts at 0, and goes up to however many files were retrieved.   
+Recreate a full dataset of audio features of songs downloaded through Spotify's
+`download my data <https://support.spotify.com/us/article/data-rights-and-privacy-settings/>`_ facility.  
+
+This requires the files named ``StreamingHistory{n}.json`` where ``{n}`` represents the file number that starts at 0, and goes up to however many files were retrieved.  
+
 
 Quick start
 ==============
-Extended documentation is available on ReadTheDocs. An example of using the package to rehydrate a folder of json files is::
+Extended documentation is `available on ReadTheDocs <https://spotify-rehydrator.readthedocs.io>`_. An example of using the package to rehydrate a folder of json files is::
   
   # main.py
   from spotifyrehydrator import Rehydrator
@@ -28,15 +31,15 @@ Extended documentation is available on ReadTheDocs. An example of using the pack
       ).run(return_all=True)
 
 
-Run takes boolean arguments for `audio_features`, `artist info` or `return_all` which returns both. These will determine how much information is retrieved to make up
+Run takes boolean arguments for ``audio_features`` and ``artist info``, or for ``return_all`` which then returns both. These will determine how much information is retrieved to make up
 the full dataset that is saved into the output folder. 
 
 How it works
 =============
 #. The files for each person are read from the specified input folder.  
 #. The name and artist provided are searched with the Spotify API. The first result is taken to be the track, and the track ID is recorded.   
-#. Additional information is searched on other endpoints if `audio_features`, `artist info` or `return_all` were set to `True`.
-#. The matched track ID and audio features are saved as one **tab delimited** `.tsv` file per person into the specified output folder. 
+#. Additional information is searched on other endpoints if ``audio_features``, ``artist info`` or ``return_all`` were set to ``True``.
+#. The matched track ID and audio features are saved as one **tab delimited** ``.tsv`` file per person into the specified output folder. 
 
 Good to know
 ===============
