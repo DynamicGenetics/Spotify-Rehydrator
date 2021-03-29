@@ -1,5 +1,5 @@
 .. image:: https://github.com/DynamicGenetics/Spotify-Rehydrator/blob/main/docs/image.png?raw=true
-  :width: 450
+  :width: 400
   :alt: Spotify Rehydrator
 
 
