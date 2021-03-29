@@ -23,7 +23,7 @@ object, which is used by `Spotipy` for authenticating the API calls. You can the
 
 Assuming you have set your Client ID and Client Secret as environment variables then this is an example of how you could run the Rehydrator::
     
-    from spotify-rehydrator import Rehydrator
+    from spotifyrehydrator.utils import Rehydrator
     from spotipy.oauth2 import SpotifyClientCredentials
 
     auth = SpotifyClientCredentials(
@@ -35,7 +35,7 @@ Assuming you have set your Client ID and Client Secret as environment variables 
         input_path=os.path.join(pathlib.Path(__file__).parent.absolute(), "input"),
         output_path=os.path.join(pathlib.Path(__file__).parent.absolute(), "output"),
         sp_creds=auth,
-    ).run()
+    ).run(return_all=True)
 
 Expected formats
 ------------------
@@ -93,9 +93,15 @@ Disclaimers
 Code Documentation
 ===================
 
-.. automodule:: rehydrate
+.. automodule:: utils
     :members:
 
+
+Contributing
+=============
+Contributions to the package are very welcome! 
+
+If you would like to add a new feature then 
 
 Indices and tables
 ==================

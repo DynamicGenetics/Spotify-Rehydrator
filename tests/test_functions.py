@@ -13,7 +13,7 @@ import math
 import simplejson as json
 import pandas as pd
 
-from src.spotifyrehydrator.rehydrate import Track, Tracks, Rehydrator
+from src.spotifyrehydrator.utils import Track, Tracks, Rehydrator
 
 LOGGER = logging.getLogger(__name__)
 
