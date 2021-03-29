@@ -63,14 +63,15 @@ class Rehydrator:
 
     def __post_init__(self):
         # When this class is set up get the list of person_ids.
-        self._person_ids = self._person_ids()
+        self._person_ids = self._person_ids(self.input_path)
 
-    def _person_ids(self):
+    @staticmethod
+    def _person_ids(input_path):
 
         """Get a list of all the participant ids in the input folder.
         Return if None if there are no ids."""
 
-        file_list = os.listdir(self.input_path)
+        file_list = os.listdir(input_path)
         # Initialise id list
         ids = set()
 
