@@ -105,10 +105,10 @@ class Rehydrator:
         files = os.listdir(self.input_path)
 
         # If person_id was passed as an argument
-        if self.person_id is not None:
+        if person_id is not None:
             # Read each file
             for file in files:
-                if file.startswith(self.person_id):
+                if file.startswith(person_id):
                     # Make the full filepath for rqeading the file.
                     file = os.path.join(self.input_path, file)
 
@@ -129,7 +129,7 @@ class Rehydrator:
                     # Add this dict to the list
                     data.extend(loaded_dict)  # Read data frame from json file
 
-        logger.info("---> I've read all the files for {}".format(self.person_id))
+        logger.info("---> I've read all the files for {}".format(person_id))
 
         return pd.DataFrame.from_records(data)
 
@@ -139,12 +139,12 @@ class Rehydrator:
         return_all: bool = False,
         audio_features: bool = False,
         artist_info: bool = False,
-    ) -> None:
+    ) -> pd.DataFrame:
 
         """
         For a single person's set of data, use the Tracks class to get all of
         the track IDs and features, then join these on the full listening 
-        history data. Save out the complete data.
+        history data. Save out the complete data, and return it too. 
 
         Parameters
         -----------
@@ -157,12 +157,12 @@ class Rehydrator:
         # Read the input data
         input_data = self._read_data(person_id=person_id)
 
-        if self.person_id is not None:
-            logging.info("---> Rehydrating {}".format(self.person_id))
+        if person_id is not None:
+            logging.info("---> Rehydrating {}".format(person_id))
 
         # Get the data for the individual tracks
         track_data = Tracks(
-            names=input_data[["artistName", "trackName"]],
+            data=input_data[["artistName", "trackName"]],
             client_id=self.client_id,
             client_secret=self.client_secret,
         ).get(return_all, audio_features, artist_info)
@@ -173,11 +173,13 @@ class Rehydrator:
         )
 
         # Set a column as the personID
-        if self.person_id is not None:
-            rehydrated_data["personID"] = self.person_id
+        if person_id is not None:
+            rehydrated_data["personID"] = person_id
 
         # Save out the rehydrated data
-        self._save(rehydrated_data, person_id=person)
+        self._save(rehydrated_data, person_id=person_id)
+
+        return rehydrated_data
 
     def run(
         self,
@@ -200,7 +202,7 @@ class Rehydrator:
                 # If it doesn't then carry on.
                 else:
                     self.rehydrate(person, return_all, audio_features, artist_info)
-        except AttributeError:  # NoneType error thrown if no unique people
+        except TypeError:  # NoneType error thrown if no unique people
             logging.info(
                 "---> No unique identifiers found. Rehydrating all files together."
             )
@@ -435,11 +437,12 @@ class Tracks:
         # Get the basic track information
         tracks = self._get_track_info()
 
+        # Make a subdf without any trackIDs that were missing or errors.
+        to_find = tracks[~tracks["trackID"].isin(["MISSING", "ERROR"])]
+
         if audio_features or return_all is True:
-            # Make a list of IDs without any trackIDs that were missing or errors.
-            to_find = tracks[~tracks["trackID"].isin(["MISSING", "ERROR"])]
-            to_find = to_find["trackID"].tolist()
-            features = self._get_audio_features(track_ids=to_find)
+            trackids = to_find["trackID"].tolist()
+            features = self._get_audio_features(track_ids=trackids)
 
             # Merge again so we have all of the tracks (including missing ones we filtered out earlier).
             tracks = pd.merge(
@@ -448,7 +451,7 @@ class Tracks:
 
         if artist_info or return_all is True:
             # Make a list of artist IDs.
-            artists = tracks["artistID"].unique()
+            artists = to_find["artistID"].unique()
             artist_info = self._get_artist_info(artist_ids=artists.tolist())
 
             # Merge into the main tracks dataset.
@@ -456,9 +459,10 @@ class Tracks:
                 tracks, artist_info, how="left", left_on="artistID", right_on="id"
             )
 
-        # Drop left over / repeated columns
+        # Drop left over / repeated columns if they are in the dataframe
+        leftover_columns = ["uri", "track_href", "analysis_url", "id_x", "id_y"]
         tracks.drop(
-            columns=["uri", "track_href", "analysis_url", "id_x", "id_y"], inplace=True
+            columns=[col for col in tracks if col in leftover_columns], inplace=True
         )
 
         return tracks
@@ -615,17 +619,15 @@ class Track:
 
         try:
             results = self.search_results()
-        except IndexError:
-            try:  # remove apostrophes (most common problem)
+            if not results["tracks"]["items"]:  # If the results are empty
                 results = self.search_results(remove_char="'")
-
-            except IndexError:
-                try:  # remove dash and a space (2nd most common problem)
+                if not results["tracks"]["items"]:  # If the results are empty
                     results = self.search_results(remove_char="- ")
-
-                except IndexError:  # other punctuation / spelling error, ~1.5% spotify records
-                    logger.info("---> {} not found.".format((self.artist, self.name)))
-                    return {"trackID": "MISSING"}
+                    if not results["tracks"]["items"]:  # If the results are still empty
+                        logger.info(
+                            "---> {} not found.".format((self.artist, self.name))
+                        )
+                        return {"trackID": "MISSING"}
 
         except Exception as e:  # other errors
             logger.info(
@@ -634,5 +636,5 @@ class Track:
             return {"trackID": "ERROR"}
 
         # Assuming we successfully got some results, extract requested info and return
-        return self._extract_results(results, return_all, artist_info, audio_features,)
+        return self._extract_results(results, return_all, artist_info, audio_features)
 
