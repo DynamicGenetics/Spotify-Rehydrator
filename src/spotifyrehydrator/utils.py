@@ -1,5 +1,5 @@
 """
-Main module for the `spotifyrehydrator` package, containing three dataclasses.
+The main module for the `spotifyrehydrator` package contains three dataclasses.
 
 `Track` operates on a single Track instance, starting from just a `name` and an `artist`,
 as would be provided in self-requested data. It is possible to use `Track` to get information
@@ -44,15 +44,21 @@ class Rehydrator:
 
     Attributes
     ----------
-    input_path: path to the directory (folder) where the input json files are stored.
-    output_path: path to the directory (folder) where the output .tsv files are saved.
-    client_id: Spotify API client ID Credentials
-    client_secret: Spotify API client secret Credentials
-    _person_ids: A list of each of the unique 'people' files identified for, or None.
+    input_path: str
+        path to the directory (folder) where the input json files are stored.
+    output_path: str
+        path to the directory (folder) where the output .tsv files are saved.
+    client_id: str
+        Spotify API client ID Credentials
+    client_secret: str
+        Spotify API client secret Credentials
+    _person_ids: list or None
+        A list of each of the unique 'people' files identified for, or None.
 
     Example
     -------
-        ``Rehydrator(input_path, output_path, sp).run()``
+
+        >>> Rehydrator(input_path, output_path, sp).run()
     """
 
     input_path: str
@@ -144,15 +150,19 @@ class Rehydrator:
 
         """
         For a single person's set of data, use the Tracks class to get all of
-        the track IDs and features, then join these on the full listening 
-        history data. Save out the complete data, and return it too. 
+        the track IDs and features, then join these on the full listening
+        history data. Save out the complete data, and return it too.
 
         Parameters
         -----------
         person_id: str = None
-        return_all: bool = False
-        audio_features: bool = False
-        artist_info: bool = False
+            Unique ID for the person this set of data belongs to.
+        return_all: bool, default = False
+            Return both audio_features and artist_info
+        audio_features: bool, default = False
+            Return each `track's audio features. <https://developer.spotify.com/documentation/web-api/reference/#object-audiofeaturesobject>`_
+        artist_info: bool, default = False
+            Return the `popularity and genre list for each track's artist <https://developer.spotify.com/documentation/web-api/reference/#object-artistobject>`_
         """
 
         if person_id is not None:
@@ -194,14 +204,12 @@ class Rehydrator:
 
         Parameters
         -----------
-        return_all: bool = False
+        return_all: bool, default = False
             Return both audio_features and artist_info
-        audio_features: bool = False
-            Return each track's audio features. 
-            `Spotify documentation available here. <https://developer.spotify.com/documentation/web-api/reference/#object-audiofeaturesobject>`_
-        artist_info: bool = False
-            Return the popularity and genre list for each track's artist. 
-            `Spotify documentation available here. <https://developer.spotify.com/documentation/web-api/reference/#object-artistobject>`_
+        audio_features: bool, default = False
+            Return each `track's audio features. <https://developer.spotify.com/documentation/web-api/reference/#object-audiofeaturesobject>`_
+        artist_info: bool, default = False
+            Return the `popularity and genre list for each track's artist <https://developer.spotify.com/documentation/web-api/reference/#object-artistobject>`_
         """
 
         try:
@@ -220,11 +228,15 @@ class Rehydrator:
             logging.warn(
                 "---> No unique identifiers found. Rehydrating all files together."
             )
-            self.rehydrate(return_all=return_all, audio_features=audio_features, artist_info=artist_info)
+            self.rehydrate(
+                return_all=return_all,
+                audio_features=audio_features,
+                artist_info=artist_info,
+            )
 
     def _save(self, data: pd.DataFrame, person_id: str = None):
 
-        """Function to save the rehydrated data out to .tsv. person_id is optional for file naming."""
+        """Function to save the rehydrated data out to ``.tsv``. ``person_id`` is optional for file naming."""
 
         # Create an output folder if it doesn't already exist
         if not os.path.exists(self.output_path):
@@ -247,9 +259,7 @@ class Rehydrator:
             )
 
         logger.info(
-            "---> Rehydrated data has been saved to the output folder".format(
-                person_id
-            )
+            "---> Rehydrated data has been saved to the output folder".format(person_id)
         )
 
 
@@ -269,10 +279,18 @@ class Tracks:
 
     Example
     -------
-        ``Tracks(data, client_id, client_secret).get(return_all=True)``
 
-    This will return a pd.Dataframe with feature columns filled for each unique track
+        >>> Tracks(data, client_id, client_secret).get(return_all=True)
+
+    This will return a ``pd.Dataframe`` with feature columns filled for each unique track
     in the original data.
+
+
+    Raises
+    -------
+    KeyError
+        If the input data provided does not contain a ``artistName`` and ``trackName``
+
     """
 
     data: pd.DataFrame
@@ -435,17 +453,16 @@ class Tracks:
     ) -> pd.DataFrame:
 
         """
-        Get the requested data for each track. Returns a dataframe of unique tracks. 
+        Get the requested data for each track. Returns a dataframe of unique tracks.
 
         Parameters
         ------------
         return_all: bool, default = False
-            Run with all optional data arguments as True
-        artist_info: bool, default = False
-            Include keys of 'artist_genres' and 'artist_pop' with list of artist's genres and popularity rating
-            given by the Spotify API artist end point.
+            Return both audio_features and artist_info
         audio_features: bool, default = False
-            Include key of 'audio_features' with value as a dict of the results from the audio_features endpoint.
+            Return each `track's audio features. <https://developer.spotify.com/documentation/web-api/reference/#object-audiofeaturesobject>`_
+        artist_info: bool, default = False
+            Return the `popularity and genre list for each track's artist <https://developer.spotify.com/documentation/web-api/reference/#object-artistobject>`_
         """
 
         # Get the basic track information
@@ -487,22 +504,29 @@ class Track:
 
     """
     A class that searches for and returns a spotify ID and other optional information for a track,
-    given a trackName and and artistName.
+    given a ``trackName`` and and ``artistName``.
 
     Attributes
     ----------
-    name: The name of the track (str).
-    artist: The name of the artist (str).
-    client_id: Spotify API client ID Credentials
-    client_secret: Spotify API client secret Credentials
+    name: str
+        The name of the track.
+    artist: str
+        The name of the artist.
+    client_id: str
+        Spotify API client ID Credentials
+    client_secret: str
+        Spotify API client secret Credentials
+
     Example
     -------
+
     .. code-block::
         heroes = Track(name="Heroes", artist="David Bowie", sp_creds=creds)
         # Returns dict with just the SpotifyID
         heroes.get()
         # Returns dict with all requested information
         heroes.get(return_all=True)
+
 
     """
 
@@ -536,7 +560,8 @@ class Track:
             track = self.name
 
         results = self.sp_auth.search(
-            q="artist:" + artist + " track:" + track, type="track",
+            q="artist:" + artist + " track:" + track,
+            type="track",
         )
         # Return the first result from this search
         return results
@@ -623,12 +648,11 @@ class Track:
         Parameters
         ------------
         return_all: bool, default = False
-            Run with all optional data arguments as True
-        artist_info: bool, default = False
-            Include keys of 'artist_genres' and 'artist_pop' with list of artist's genres and popularity rating
-            given by the Spotify API artist end point.
+            Return both audio_features and artist_info
         audio_features: bool, default = False
-            Include key of 'audio_features' with value as a dict of the results from the audio_features endpoint.
+            Return each `track's audio features. <https://developer.spotify.com/documentation/web-api/reference/#object-audiofeaturesobject>`_
+        artist_info: bool, default = False
+            Return the `popularity and genre list for each track's artist <https://developer.spotify.com/documentation/web-api/reference/#object-artistobject>`_
         """
 
         try:
@@ -651,4 +675,3 @@ class Track:
 
         # Assuming we successfully got some results, extract requested info and return
         return self._extract_results(results, return_all, artist_info, audio_features)
-

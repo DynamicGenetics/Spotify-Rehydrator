@@ -79,7 +79,12 @@ class TestTracks:
 
     def test_incorrect_input_columns(self):
         """Try to give Tracks obj a df with incorrect columns."""
-        df = pd.DataFrame({"col1": [2, 1, 9, 8, 7, 4], "col2": [0, 1, 9, 4, 2, 3],})
+        df = pd.DataFrame(
+            {
+                "col1": [2, 1, 9, 8, 7, 4],
+                "col2": [0, 1, 9, 4, 2, 3],
+            }
+        )
         with pytest.raises(KeyError):
             tracks = Tracks(
                 df,
@@ -175,7 +180,10 @@ class TestRehydrator:
 
     @pytest.mark.parametrize(
         "person, input, expected",
-        [("Person002", INPUT_PEOPLE, 9), (None, INPUT_NO_PEOPLE, 65),],
+        [
+            ("Person002", INPUT_PEOPLE, 9),
+            (None, INPUT_NO_PEOPLE, 65),
+        ],
     )
     def test_rehydrate(self, person, input, expected):
         data = Rehydrator(
@@ -202,6 +210,7 @@ class TestRehydrator:
             ).run()
         # Assert we get the correct warning message in the logger.
         assert "Output file for Person002 already exists." in caplog.text
+
 
 class TestIntegrationPeople:
     """Class to check the whole rehydrator behaves as expected when there are multiple people."""

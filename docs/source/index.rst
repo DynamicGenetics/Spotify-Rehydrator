@@ -14,8 +14,7 @@ Before you use the rehyrdator, please make sure to read the Disclaimers to get a
 User Guide
 =====================
 The *Spotify Rehydrator* primarily operates through the ``Rehydrator`` class. The required inputs for this class are an input folder,
-an output folder and a `ClientCredentials <https://spotipy.readthedocs.io/en/2.16.1/#client-credentials-flow>`_ 
-object, which is used by `Spotipy` for authenticating the API calls. You can then call the ``run()`` method.
+an output folder and a Client ID and Client Secret from the Spotify Developer Portal. These are used for authenticating the API calls. You can then call the ``run()`` method.
 
 .. note::  To request developer credentials go to `Spotify's developer portal <https://developer.spotify.com/dashboard/>`_.
             You will need to 'create an app' which have credentials associated with it.
@@ -23,19 +22,26 @@ object, which is used by `Spotipy` for authenticating the API calls. You can the
 
 Assuming you have set your Client ID and Client Secret as environment variables then this is an example of how you could run the Rehydrator::
     
+    import os
     from spotifyrehydrator import Rehydrator
-    from spotipy.oauth2 import SpotifyClientCredentials
-
-    auth = SpotifyClientCredentials(
-        client_id=CLIENT_ID, 
-        client_secret=CLIENT_SECRET
-        )
 
     Rehydrator(
         input_path=os.path.join(pathlib.Path(__file__).parent.absolute(), "input"),
         output_path=os.path.join(pathlib.Path(__file__).parent.absolute(), "output"),
-        sp_creds=auth,
+        client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+        client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
     ).run(return_all=True)
+
+
+The ``.run()`` argument will by default return the following information as columns: spotify track ID of the returned track, the name of the artist of the returned track,
+the name of the returned track. This will be joined with the searched artist and track, the person ID where relevant, and the time metadata in the original ``.json`` file.
+There are then three optional arguments:  
+* ``artist_info = True`` will return the popularity of the artist returned and a list of genres attributed to that artist, provided by `the Artists API endpoint <https://developer.spotify.com/documentation/web-api/reference/#category-artists>`_
+* ``audio_features = True`` will return a column for each of the audio features provided by the `Tracks API. <https://developer.spotify.com/documentation/web-api/reference/#category-tracks>`_
+* ``return_all = True`` will return both the above. 
+
+Be aware that extra arguments involve more API calls and so may take longer. 
+
 
 Expected formats
 ------------------
@@ -81,9 +87,7 @@ Useful information
 --------------------
 * If the output directory does not exist then it will be created. 
 * Rehydration for one individual can take 15 minutes or more depending on how many songs there are.
-* If a file for the next individual's data to be rehydrated already exists in the output directory
-    then that person will be skipped. You will need to delete or remove their file from the output
-    folder for the rehydrator to process their data. 
+* If a file for the next individual's data to be rehydrated already exists in the output directory then that person will be skipped. You will need to delete or remove their file from the output folder for the rehydrator to process their data. 
 
 Disclaimers
 ================
