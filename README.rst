@@ -15,7 +15,8 @@ This requires the files named ``StreamingHistory{n}.json`` where ``{n}`` represe
 
 Quick start
 ==============
-Extended documentation is `available on ReadTheDocs <https://spotify-rehydrator.readthedocs.io>`_. An example of using the package to rehydrate a folder of json files is::
+Extended documentation is `available on ReadTheDocs <https://spotify-rehydrator.readthedocs.io>`_.
+First, `install the package using pip. <https://pypi.org/project/spotifyrehydrator/>`_ An example of using the package to rehydrate a folder of json files is then::
   
   # main.py
   from spotifyrehydrator import Rehydrator

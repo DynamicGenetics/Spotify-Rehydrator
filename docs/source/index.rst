@@ -20,6 +20,10 @@ an output folder and a Client ID and Client Secret from the Spotify Developer Po
             You will need to 'create an app' which have credentials associated with it.
             Your app dashboard will give you access to your ``Client ID`` and a ``Client Secret``. 
 
+Install the *Spotify Rehydrator* using ``pip``::
+    pip install spotifyrehydrator
+
+
 Assuming you have set your Client ID and Client Secret as environment variables then this is an example of how you could run the Rehydrator::
     
     import os
