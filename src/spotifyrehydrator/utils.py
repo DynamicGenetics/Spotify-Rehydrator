@@ -89,9 +89,6 @@ class Rehydrator:
                 # If it has split into 2 parts, take the first part
                 if len(name_split) > 1:
                     ids.add(file.split(sep="_")[0])
-                # If there are no files with ids then pass
-                else:
-                    pass
 
         if ids:
             return list(ids)
@@ -560,8 +557,7 @@ class Track:
             track = self.name
 
         results = self.sp_auth.search(
-            q="artist:" + artist + " track:" + track,
-            type="track",
+            q="artist:" + artist + " track:" + track, type="track",
         )
         # Return the first result from this search
         return results

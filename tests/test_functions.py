@@ -9,9 +9,10 @@ import os
 import logging
 import shutil
 import math
-
 import simplejson as json
 import pandas as pd
+
+from spotipy.exceptions import SpotifyException
 
 from src.spotifyrehydrator.utils import Track, Tracks, Rehydrator
 
@@ -30,6 +31,13 @@ class TestTrack:
         self.test_track = Track(
             artist="David Bowie",
             name="Heroes",
+            client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+            client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
+        )
+
+        self.wrong_track = Track(
+            artist="Not a name of an artist",
+            name="Not a name of a track",
             client_id=os.getenv("SPOTIFY_CLIENT_ID"),
             client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
         )
@@ -79,12 +87,7 @@ class TestTracks:
 
     def test_incorrect_input_columns(self):
         """Try to give Tracks obj a df with incorrect columns."""
-        df = pd.DataFrame(
-            {
-                "col1": [2, 1, 9, 8, 7, 4],
-                "col2": [0, 1, 9, 4, 2, 3],
-            }
-        )
+        df = pd.DataFrame({"col1": [2, 1, 9, 8, 7, 4], "col2": [0, 1, 9, 4, 2, 3],})
         with pytest.raises(KeyError):
             tracks = Tracks(
                 df,
@@ -180,10 +183,7 @@ class TestRehydrator:
 
     @pytest.mark.parametrize(
         "person, input, expected",
-        [
-            ("Person002", INPUT_PEOPLE, 9),
-            (None, INPUT_NO_PEOPLE, 65),
-        ],
+        [("Person002", INPUT_PEOPLE, 9), (None, INPUT_NO_PEOPLE, 65),],
     )
     def test_rehydrate(self, person, input, expected):
         data = Rehydrator(
@@ -246,9 +246,6 @@ class TestIntegrationNoPeople:
     """Class to check the whole rehydrator behaves as expected when there are no people."""
 
     def setup_method(self):
-        # Delete the current output folder
-        if os.path.exists(OUTPUT):
-            shutil.rmtree(OUTPUT)
         # Run the rehydrator
         Rehydrator(
             INPUT_NO_PEOPLE,
