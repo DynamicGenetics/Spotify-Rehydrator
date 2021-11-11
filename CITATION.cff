@@ -1,0 +1,34 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Spotify Rehydrator
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - family-names: Di Cara
+    given-names: Nina
+    email: ninadicara@protonmail.com
+    affiliation: University of Bristol
+    orcid: 'https://orcid.org/0000-0002-6179-1067'
+  - given-names: Alastair
+    family-names: Tanner
+    affiliation: University of Bristol
+    orcid: 'https://orcid.org/0000-0001-8045-2856'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.5675283
+    description: Zenodo
+repository-code: >-
+  https://github.com/DynamicGenetics/Spotify-Rehydrator
+url: 'https://spotify-rehydrator.readthedocs.io/'
+abstract: >-
+  Recreate a full dataset of audio features of songs
+  downloaded through Spotify's download my data
+  facility.
+keywords:
+  - spotify
+  - music
+license: GPL-3.0
