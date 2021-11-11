@@ -1,10 +1,14 @@
 .. image:: https://github.com/DynamicGenetics/Spotify-Rehydrator/blob/main/docs/image.png?raw=true
   :width: 400
   :alt: Spotify Rehydrator
+  
+.. image:: https://zenodo.org/badge/333743950.svg
+   :target: https://zenodo.org/badge/latestdoi/333743950
 
 
 .. |GPLv3 license| image:: https://img.shields.io/badge/License-GPLv3-blue.svg
    :target: http://perso.crans.org/besson/LICENSE.html
+
 
 
 Recreate a full dataset of audio features of songs downloaded through Spotify's
