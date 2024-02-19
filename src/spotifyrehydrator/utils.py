@@ -335,7 +335,7 @@ class Tracks:
         # Init empty listc
         track_list = []
 
-        with alive_bar(len(tracks), spinner="dots_recur") as bar:
+        with alive_bar(len(tracks)) as bar:
             # For each artist and track name in the dataframe...
             for index, track in tracks.items():
                 try:
