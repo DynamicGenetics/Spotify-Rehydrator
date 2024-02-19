@@ -75,7 +75,7 @@ class TestTrack:
 
 class TestTracks:
     def setup_method(self):
-        with open(os.path.join(INPUT_PEOPLE, "Person002_StreamingHistory.json")) as f:
+        with open(os.path.join(INPUT_PEOPLE, "Person002_StreamingHistory_music_0.json")) as f:
             data = json.load(f)
         data = pd.DataFrame.from_records(data)
         self.tracks = Tracks(
@@ -136,7 +136,7 @@ class TestTracks:
 
     def test_all_entries_returned(self):
         """Ensure all artist/track combinations that were input were returned"""
-        with open(os.path.join(INPUT_PEOPLE, "Person002_StreamingHistory.json")) as f:
+        with open(os.path.join(INPUT_PEOPLE, "Person002_StreamingHistory_music_0.json")) as f:
             input_data = json.load(f)
         input_data = pd.DataFrame.from_records(input_data)
         input_data = input_data[["artistName", "trackName"]]
@@ -165,9 +165,9 @@ class TestRehydrator:
     @pytest.mark.parametrize(
         "person, input, expected",
         [
-            ("Person001", INPUT_PEOPLE, 113),
-            ("Person002", INPUT_PEOPLE, 9),
-            (None, INPUT_NO_PEOPLE, 65),
+            ("Person001", INPUT_PEOPLE, 80),
+            ("Person002", INPUT_PEOPLE, 24),
+            (None, INPUT_NO_PEOPLE, 109),
         ],
     )
     def test_read_data(self, person, input, expected):
@@ -183,7 +183,7 @@ class TestRehydrator:
 
     @pytest.mark.parametrize(
         "person, input, expected",
-        [("Person002", INPUT_PEOPLE, 9), (None, INPUT_NO_PEOPLE, 65),],
+        [("Person002", INPUT_PEOPLE, 24), (None, INPUT_NO_PEOPLE, 109),],
     )
     def test_rehydrate(self, person, input, expected):
         data = Rehydrator(

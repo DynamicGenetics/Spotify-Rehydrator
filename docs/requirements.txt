@@ -1,4 +1,4 @@
-simplejson==3.17.2  # https://github.com/simplejson/simplejson
-spotipy==2.16.1     # https://github.com/plamere/spotipy
-pandas==1.2.2       # https://github.com/pandas-dev/pandas
-alive_progress>=1.6 # https://github.com/rsalmei/alive-progress
+simplejson>=3.17     # https://github.com/simplejson/simplejson
+spotipy>=2.16        # https://github.com/plamere/spotipy
+pandas>=1.2          # https://github.com/pandas-dev/pandas
+alive_progress>=1.6  # https://github.com/rsalmei/alive-progress

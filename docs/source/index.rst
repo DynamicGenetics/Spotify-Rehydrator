@@ -4,7 +4,7 @@ Welcome to the Spotify Rehydrator!
 .. toctree::
     :maxdepth: 2
 
-The *Spotify Rehydrator* was created to provide a simple way to generate full datasets of track features from user-owned Spotify data.
+The *Spotify Rehydrator* was created to provide a simple way to generate full datasets of track features from user-owned Spotify music streaming data.
 It relies on the excellent `Spotipy <https://github.com/plamere/spotipy/>`_ library and brings together a series of API calls in a convenient way that can manage data from
 multiple different people, as would be common in a research study. It can also be used by individuals who are curious to learn more about
 their own data! The idea of a rehydrator was inspired by similar work being done to enable sharing of Twitter datasets for research purposes. 
@@ -49,6 +49,7 @@ Be aware that extra arguments involve more API calls and so may take longer.
 
 Expected formats
 ------------------
+This package is built with Python 3.9 but may work with other versions, however this isn't tested.
 
 Streaming History JSON
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -74,9 +75,9 @@ If you have files belonging to multiple individuals then the package expects the
 unique identifier for each person to be the prefix, followed by an underscore. For example::
 
     # input folder
-    person001_StreamingHistory0.json
-    person001_StreamingHistory1.json
-    person002_StreamingHistory0.json
+    person001_StreamingHistory_music_0.json
+    person001_StreamingHistory_music_1.json
+    person002_StreamingHistory_music_0.json
 
 This would result in two rehydrated files being saved to the output folder::
 
@@ -109,7 +110,24 @@ Contributing
 =============
 Contributions to the package are very welcome! 
 
-If you would like to add a new feature then 
+Tests
+--------
+For tests to run you'll need a Spotify Client ID and Secret - see the `User Guide` above.
+The package tests assumes these are set as environment variables, otherwise you will need to edit `tests/test_functions` to read a file with the secrets as variables.
+
+To set up a `venv`, clone this repository and in the root folder run:
+
+```bash 
+python -m venv venv
+source venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+To run tests, from root: 
+`pytest tests/`
+
+
 
 Indices and tables
 ==================

@@ -19,11 +19,11 @@ sys.path.insert(0, os.path.abspath("../../src/spotifyrehydrator/"))
 # -- Project information -----------------------------------------------------
 
 project = "Spotify Rehydrator"
-copyright = "2021, Nina Di Cara"
+copyright = "2024, Nina Di Cara"
 author = "Nina Di Cara"
 
 # The full version, including alpha/beta/rc tags
-release = "0.0.1"
+release = "0.0.2"
 
 
 # -- General configuration ---------------------------------------------------

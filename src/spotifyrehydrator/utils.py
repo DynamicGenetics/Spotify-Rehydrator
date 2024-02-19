@@ -86,8 +86,8 @@ class Rehydrator:
             if file.endswith(".json"):
                 # Get the unique user ID
                 name_split = file.split(sep="_")
-                # If it has split into 2 parts, take the first part
-                if len(name_split) > 1:
+                # If it has split into more than 3 parts, take the first part
+                if len(name_split) > 3:
                     ids.add(file.split(sep="_")[0])
 
         if ids:
@@ -335,7 +335,7 @@ class Tracks:
         # Init empty listc
         track_list = []
 
-        with alive_bar(len(tracks), spinner="dots_recur") as bar:
+        with alive_bar(len(tracks)) as bar:
             # For each artist and track name in the dataframe...
             for index, track in tracks.items():
                 try:

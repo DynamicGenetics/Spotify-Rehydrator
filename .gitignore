@@ -1,8 +1,11 @@
+# Environment
+venv/
+.cache
+
 # Files
 .pypirc
 
 # Inputs/outputs
-*.json
 input/
 output/
 temp/
